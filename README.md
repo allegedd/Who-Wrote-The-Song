@@ -76,8 +76,35 @@ Figma：https://www.figma.com/design/vGL5EN9xJiYxhKF7nozzQ5/%E5%8D%92%E6%A5%AD%E
 
 ## ■ ER 図
 
-- ER 図 1
-  [![ER図1](https://i.gyazo.com/9a530b9e4612774bcf128cca89caafad.png)](https://gyazo.com/9a530b9e4612774bcf128cca89caafad)
+### ER 図 1
 
-- ER 図 2(外部 DB,検索機能で利用予定)
-  [![ER図2(外部DB,検索機能で利用予定)](https://i.gyazo.com/59b1f2a77238823b28185936e9e095d8.png)](https://gyazo.com/59b1f2a77238823b28185936e9e095d8)
+各テーブルの説明
+
+- users：ユーザ
+- favorites：お気に入りの楽曲
+- playlists：プレイリスト
+- playlist_items：プレイリストに含まれる楽曲
+
+[![Image from Gyazo](https://i.gyazo.com/4b563ba56709e399d06901621fbefdf1.png)](https://gyazo.com/4b563ba56709e399d06901621fbefdf1)
+
+### ER 図 2(外部 DB,検索機能で利用予定)
+
+各テーブルの説明
+
+- recording: 録音（実際の演奏・録音同じ楽曲の異なるバージョンを含む（カバー、リミックス、ライブ版など））
+- artist：アーティスト
+- artist_credit：アーティストのクレジット全体表記
+- artist_credit_name：アーティストのクレジット名
+- work：楽曲
+- l_artist_work：artist と work の中間テーブル
+- l_recording_work：recording と work の中間テーブル
+- link： link_type を指定
+- link_type：それぞれのエンティティの関係性の種類（composer、lyricist 等）
+- release：リリース形態（アルバム、シングル等）
+- release_status：リリースの公式性や種類(公式、非公式等)
+- release_event：いつ、どこでリリースされたか
+- track：トラック（リリース内の個別曲）
+- medium：記録媒体
+- area：地域名、国(アーティストの出身)
+
+[![Image from Gyazo](https://i.gyazo.com/e6fa1292d8f2d7937114dc34024f1114.png)](https://gyazo.com/e6fa1292d8f2d7937114dc34024f1114)
