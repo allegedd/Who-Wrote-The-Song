@@ -69,3 +69,12 @@ Gem Devise、Omniauth、httparty
 関連楽曲検索：MusicBrainz(Database or API)  
 プレビュー：Youtube Data APIv3  
 プレイリスト生成,音楽配信サービスへ連携：Spotify API
+
+### 画面遷移図
+
+Figma：https://www.figma.com/design/vGL5EN9xJiYxhKF7nozzQ5/%E5%8D%92%E6%A5%AD%E5%88%B6%E4%BD%9C_%E7%94%BB%E9%9D%A2%E9%81%B7%E7%A7%BB%E5%9B%B3?node-id=0-1&t=RKcZvvzQHLVSRMU1-1
+
+### ER 図
+
+[![ER図1](https://i.gyazo.com/9a530b9e4612774bcf128cca89caafad.png)](https://gyazo.com/9a530b9e4612774bcf128cca89caafad)
+[![ER図2(外部DB,検索機能で利用予定)](https://i.gyazo.com/59b1f2a77238823b28185936e9e095d8.png)](https://gyazo.com/59b1f2a77238823b28185936e9e095d8)
