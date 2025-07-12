@@ -85,7 +85,7 @@ Figma：https://www.figma.com/design/vGL5EN9xJiYxhKF7nozzQ5/%E5%8D%92%E6%A5%AD%E
 - playlists：プレイリスト
 - playlist_items：プレイリストに含まれる楽曲
 
-[![Image from Gyazo](https://i.gyazo.com/fc011ec571a0d40493dc0b68ed8537eb.png)](https://gyazo.com/fc011ec571a0d40493dc0b68ed8537eb)
+[![Image from Gyazo](https://i.gyazo.com/2d80a08ea0aed2794ebf4bfb9913df2e.png)](https://gyazo.com/2d80a08ea0aed2794ebf4bfb9913df2e)
 
 ### ER 図 2(外部 DB,検索機能で利用予定)
 
