@@ -69,3 +69,42 @@ Gem Devise、Omniauth、httparty
 関連楽曲検索：MusicBrainz(Database or API)  
 プレビュー：Youtube Data APIv3  
 プレイリスト生成,音楽配信サービスへ連携：Spotify API
+
+## ■ 画面遷移図
+
+Figma：https://www.figma.com/design/vGL5EN9xJiYxhKF7nozzQ5/%E5%8D%92%E6%A5%AD%E5%88%B6%E4%BD%9C_%E7%94%BB%E9%9D%A2%E9%81%B7%E7%A7%BB%E5%9B%B3?node-id=0-1&t=RKcZvvzQHLVSRMU1-1
+
+## ■ ER 図
+
+### ER 図 1
+
+各テーブルの説明
+
+- users：ユーザ
+- favorites：お気に入りの楽曲
+- playlists：プレイリスト
+- playlist_items：プレイリストに含まれる楽曲
+
+[![Image from Gyazo](https://i.gyazo.com/d33bb1d36d2db92d62e653932ebd6234.png)](https://gyazo.com/d33bb1d36d2db92d62e653932ebd6234)
+
+### ER 図 2(外部 DB,検索機能で利用予定)
+
+各テーブルの説明
+
+- recording: 録音（実際の演奏・録音同じ楽曲の異なるバージョンを含む（カバー、リミックス、ライブ版など））
+- artist：アーティスト
+- artist_credit：アーティストのクレジット全体表記
+- artist_credit_name：アーティストのクレジット名
+- work：楽曲
+- l_artist_work：artist と work の中間テーブル
+- l_recording_work：recording と work の中間テーブル
+- link： link_type を指定
+- link_type：それぞれのエンティティの関係性の種類（composer、lyricist 等）
+- release：リリース形態（アルバム、シングル等）
+- release_status：リリースの公式性や種類(公式、非公式等)
+- release_event：いつ、どこでリリースされたか
+- track：トラック（リリース内の個別曲）
+- medium：記録媒体
+- area：地域名、国(アーティストの出身)
+
+[![Image from Gyazo](https://i.gyazo.com/e6fa1292d8f2d7937114dc34024f1114.png)](https://gyazo.com/e6fa1292d8f2d7937114dc34024f1114)
