@@ -4,11 +4,12 @@ networks:
     name: musicbrainz-docker_app-network
 
 services:
-  db:
+  app-db:
     image: postgres
     restart: always
     environment:
       TZ: Asia/Tokyo
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes:
       - postgresql_data:/var/lib/postgresql/data
@@ -23,11 +24,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-  web:
+  app-web:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: bash -c "bundle install && bundle exec rails db:prepare && rm -f tmp/pids/server.pid && bin/rails server -b 0.0.0.0 -p 3000"
+    command: bash -c "bundle install && rm -f tmp/pids/server.pid && bin/rails server -b 0.0.0.0 -p 3000"
     tty: true
     stdin_open: true
     volumes:
@@ -41,7 +42,7 @@ services:
     networks:
       - app-network
     depends_on:
-      db:
+      app-db:
         condition: service_healthy
 volumes:
   bundle_data:
