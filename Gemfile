@@ -56,11 +56,11 @@ group :test do
   gem "selenium-webdriver"
 end
 
-#Solr Client
+# Solr Client
 gem "rsolr"
 
-#XML Parser
+# XML Parser
 gem "nokogiri"
 
-#css-framework
+# css-framework
 gem "tailwindcss-rails", "~> 4.3"
