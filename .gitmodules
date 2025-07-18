@@ -1,0 +1,3 @@
+[submodule "musicbrainz-docker"]
+	path = musicbrainz-docker
+	url = https://github.com/allegedd/musicbrainz-docker.git
