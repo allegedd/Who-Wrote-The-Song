@@ -1,0 +1,37 @@
+services:
+  app-db:
+    image: postgres
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d app_development -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  app-web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: bash -c "bundle install && rm -f tmp/pids/server.pid && bin/rails server -b 0.0.0.0 -p 3000"
+    tty: true
+    stdin_open: true
+    volumes:
+      - .:/app
+      - bundle_data:/usr/local/bundle:cached
+      - node_modules:/app/node_modules
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      app-db:
+        condition: service_healthy
+volumes:
+  bundle_data:
+  postgresql_data:
+  node_modules:
