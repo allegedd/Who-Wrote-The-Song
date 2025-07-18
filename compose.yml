@@ -1,24 +1,13 @@
-networks:
-  app-network:
-    external: true
-    name: musicbrainz-docker_app-network
-
 services:
   app-db:
     image: postgres
     restart: always
-    environment:
-      TZ: Asia/Tokyo
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+    env_file:
+      - .env
     volumes:
       - postgresql_data:/var/lib/postgresql/data
-    ports:
-      - 5433:5432
     expose:
       - "5432"
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -d app_development -U postgres"]
       interval: 10s
@@ -35,12 +24,10 @@ services:
       - .:/app
       - bundle_data:/usr/local/bundle:cached
       - node_modules:/app/node_modules
-    environment:
-      TZ: Asia/Tokyo
+    env_file:
+      - .env
     ports:
       - "3000:3000"
-    networks:
-      - app-network
     depends_on:
       app-db:
         condition: service_healthy
