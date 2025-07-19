@@ -68,6 +68,9 @@ musicbrainz:
 test:
   <<: *default
   database: app_test
+  host: <%= ENV.fetch("POSTGRES_HOST") { "app-db" } %>
+  username: <%= ENV.fetch("POSTGRES_USER") { "postgres" } %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD") { "password" } %>
 
 # As with config/credentials.yml, you never want to store sensitive information,
 # like your database password, in your source code. If your source code is
@@ -91,6 +94,7 @@ test:
 #
 production:
   <<: *default
-  database: app_production
-  username: app
-  password: <%= ENV.fetch("APP_DATABASE_PASSWORD", "") %>
+  database: <%= ENV.fetch("POSTGRES_DB") { "app_production" } %>
+  host: <%= ENV.fetch("POSTGRES_HOST") { "localhost" } %>
+  username: <%= ENV.fetch("POSTGRES_USER") { "app" } %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD") { ENV.fetch("APP_DATABASE_PASSWORD", "") } %>
