@@ -1,0 +1,66 @@
+ja:
+  activerecord:
+    attributes:
+      user:
+        username: "ユーザー名"
+        email: "メールアドレス"
+        password: "パスワード"
+        password_confirmation: "パスワード確認"
+        remember_me: "ログイン状態を保持する"
+        current_password: "現在のパスワード"
+    errors:
+      messages:
+        blank: "を入力してください"
+        too_short: "は%{count}文字以上で入力してください"
+        too_long: "は%{count}文字以内で入力してください"
+        taken: "はすでに使用されています"
+        invalid: "は無効です"
+        confirmation: "と確認が一致しません"
+  errors:
+    messages:
+      too_short: "%{count}文字以上"
+  helpers:
+    label:
+      user:
+        username: "ユーザー名"
+        email: "メールアドレス"
+        password: "パスワード"
+        password_confirmation: "パスワード確認"
+        remember_me: "ログイン状態を保持する"
+    placeholder:
+      user:
+        username: "ユーザー名"
+        email: "メールアドレス"
+        password: "パスワード"
+        password_confirmation: "パスワード確認"
+    submit:
+      user:
+        create: "アカウント登録"
+        update: "更新"
+      session:
+        create: "ログイン"
+  devise:
+    registrations:
+      new:
+        sign_up_prompt: "アカウントをお持ちでない場合は"
+    sessions:
+      new:
+        sign_in_prompt: "すでにアカウントをお持ちですか？"
+    shared:
+      links:
+        sign_in: "ログイン"
+        sign_up: "アカウント登録"
+        forgot_password: "パスワードを忘れた方"
+        confirmation_instructions: "確認メールを再送信"
+        unlock_instructions: "アカウントロック解除"
+        sign_in_with: "%{provider}でログイン"
+  views:
+    pagination:
+      first: "最初"
+      last: "最後"
+      previous: "前"
+      next: "次"
+  flash:
+    notice: "お知らせ"
+    alert: "エラー"
+    success: "成功"
