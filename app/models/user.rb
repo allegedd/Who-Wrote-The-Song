@@ -8,6 +8,6 @@ class User < ApplicationRecord
   validates :username, length: { minimum: 2, maximum: 30 }
 
   def display_name
-    username.presence || email.split('@').first
+    username.presence || email.split("@").first
   end
 end
