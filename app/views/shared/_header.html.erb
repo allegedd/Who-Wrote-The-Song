@@ -5,31 +5,59 @@
       
       <div class="hidden lg:flex items-center gap-6">
         <%= link_to "探す", "#", class: "text-gray-300 hover:text-white font-medium transition-colors duration-200" %>
-        <%= link_to "お気に入り(準備中)", "#", class: "text-gray-300 hover:text-white font-medium transition-colors duration-200" %>
-        <%= link_to "プレイリスト(準備中)", "#", class: "text-gray-300 hover:text-white font-medium transition-colors duration-200" %>
+        <% if user_signed_in? %>
+          <%= link_to "お気に入り(準備中)", "#", class: "text-gray-300 hover:text-white font-medium transition-colors duration-200" %>
+          <%= link_to "プレイリスト(準備中)", "#", class: "text-gray-300 hover:text-white font-medium transition-colors duration-200" %>
+        <% end %>
       </div>
     </div>
   </div>
   
   <div class="flex-none gap-2">
-    <div class="dropdown dropdown-end lg:hidden">
-      <div tabindex="0" role="button" class="btn btn-ghost btn-circle text-gray-300">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+    <% if user_signed_in? %>
+      <!-- ログイン後のメニュー -->
+      <div class="hidden lg:flex items-center gap-4">
+        <%= link_to "ログアウト", destroy_user_session_path, data: { "turbo-method": :delete }, class: "bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200" %>
       </div>
-      <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-gray-800 text-gray-300 rounded-box w-52 right-0 border border-gray-700">
-        <li><%= link_to "探す", "#" %></li>
-        <li><%= link_to "お気に入り(準備中)", "#" %></li>
-        <li><%= link_to "プレイリスト(準備中)", "#" %></li>
-        <li><%= link_to "ログイン", "#" %></li>
-        <li><%= link_to "アカウント登録", "#" %></li>
-      </ul>
-    </div>
-    
-    <div class="hidden lg:flex gap-3">
-      <%= link_to "ログイン", "#", class: "text-gray-300 hover:text-white font-medium transition-colors duration-200 px-4 py-2" %>
-      <%= link_to "アカウント登録", "#", class: "bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-full transition-all duration-200 shadow-md hover:shadow-lg" %>
-    </div>
+      
+      <!-- モバイル用ハンバーガーメニュー -->
+      <div class="dropdown dropdown-end lg:hidden">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-circle text-gray-300">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </div>
+        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-gray-800 text-gray-300 rounded-box w-52 right-0 border border-gray-700">
+          <li class="menu-title">
+            <span class="text-gray-400"><%= current_user.display_name %></span>
+          </li>
+          <li><%= link_to "探す", "#" %></li>
+          <li><%= link_to "お気に入り(準備中)", "#" %></li>
+          <li><%= link_to "プレイリスト(準備中)", "#" %></li>
+          <li>
+            <%= link_to "ログアウト", destroy_user_session_path, data: { "turbo-method": :delete }, class: "hover:bg-gray-700 text-red-400" %>
+          </li>
+        </ul>
+      </div>
+    <% else %>
+      <!-- ログイン前のメニュー -->
+      <div class="dropdown dropdown-end lg:hidden">
+        <div tabindex="0" role="button" class="btn btn-ghost btn-circle text-gray-300">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </div>
+        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-gray-800 text-gray-300 rounded-box w-52 right-0 border border-gray-700">
+          <li><%= link_to "探す", "#" %></li>
+          <li><%= link_to "ログイン", new_user_session_path %></li>
+          <li><%= link_to "アカウント登録", new_user_registration_path %></li>
+        </ul>
+      </div>
+      
+      <div class="hidden lg:flex gap-3">
+        <%= link_to "ログイン", new_user_session_path, class: "text-gray-300 hover:text-white font-medium transition-colors duration-200 px-4 py-2" %>
+        <%= link_to "アカウント登録", new_user_registration_path, class: "bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-full transition-all duration-200 shadow-md hover:shadow-lg" %>
+      </div>
+    <% end %>
   </div>
 </div>
