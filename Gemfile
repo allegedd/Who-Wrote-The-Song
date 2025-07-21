@@ -67,3 +67,6 @@ gem "nokogiri"
 
 # css-framework
 gem "tailwindcss-rails", "~> 4.3"
+
+# HTTP Client
+gem "httparty"
