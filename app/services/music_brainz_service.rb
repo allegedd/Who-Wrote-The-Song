@@ -479,12 +479,14 @@ class MusicBrainzService
     extract_artists_by_type(work, "lyricist")
   end
 
+  # 指定タイプのアーティスト情報を抽出
+  # composerまたはlyricistの関係情報を取得
   def extract_artists_by_type(work, type)
     relations = work.dig("relations") || []
-    
+
     relations
       .select { |rel| rel["type"] == type }
-      .map { |rel| 
+      .map { |rel|
         {
           name: rel.dig("artist", "name"),
           mbid: rel.dig("artist", "id")
