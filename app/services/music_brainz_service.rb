@@ -248,25 +248,139 @@ class MusicBrainzService
   # Songオブジェクトの配列を生成し、スコア順でソート
   def parse_works_response(response)
     works = response.dig("works") || []
-    
-    works.map do |work|
-      # Work検索APIではRelation情報が不完全なため、詳細APIで再取得
-      work_id = work["id"]
-      if work_id
-        find_work_by_id(work_id)
-      else
-        Song.new(
-          id: work["id"],
-          title: work["title"],
-          artist: extract_artist_from_work(work),
-          type: work["type"],
-          composers: extract_composers(work),
-          lyricists: extract_lyricists(work)
-        )
+
+    songs_with_metadata = works.map.with_index do |work, index|
+      artist_name = extract_artist_from_work_search(work)
+
+      song = Song.new(
+        id: work["id"],
+        title: work["title"],
+        artist: artist_name,
+        type: work["type"],
+        composers: extract_composers(work),
+        lyricists: extract_lyricists(work),
+        loading_artist: artist_name.blank?
+      )
+
+      {
+        song: song,
+        score: work["score"] || 0,
+        original_index: index
+      }
+    end.compact
+
+    songs = sort_by_score_and_date(songs_with_metadata)
+
+    populate_artists_from_cache(songs)
+
+    songs
+  end
+
+  def sort_by_score_and_date(songs_with_metadata)
+    songs_with_metadata
+      .sort_by { |item| [ -item[:score], item[:original_index] ] }
+      .map { |item| item[:song] }
+  end
+
+  # DBキャッシュからアーティスト情報を一括取得
+  # 未キャッシュ分は並列処理で取得
+  def populate_artists_from_cache(songs)
+    work_ids = songs.map(&:id)
+
+    cached_artists = ArtistCache.get_artists_batch(work_ids)
+    uncached_work_ids = work_ids - cached_artists.keys
+
+    songs.each do |song|
+      if cached_artist = cached_artists[song.id]
+        song.artist = cached_artist
+        song.loading_artist = false
       end
+    end
+
+    if uncached_work_ids.any?
+      uncached_songs = songs.select { |song| uncached_work_ids.include?(song.id) }
+      fetch_artists_in_parallel(uncached_songs)
+    end
+
+    songs
+  end
+
+  # 複数のアーティスト情報を並列取得
+  # スレッドを使用して高速化
+  def fetch_artists_in_parallel(songs)
+    max_threads = [ songs.size, 3 ].min
+    batch_size = [ songs.size / max_threads, 2 ].max
+    songs.each_slice(batch_size).map do |song_batch|
+      Thread.new do
+        song_batch.each_with_index do |song, index|
+          sleep(0.1) if index > 0
+          fetch_and_cache_artist(song)
+        end
+      end
+    end.each(&:join)
+  end
+
+  # 単一の曲のアーティスト情報を取得してキャッシュ
+  # タイムアウト時はリトライ処理
+  def fetch_and_cache_artist(song)
+    retries = 0
+    begin
+      work_detail = find_work_by_id(song.id)
+      artist_name = work_detail&.artist || "情報なし"
+
+      cache_artist_safely(song.id, artist_name)
+      song.artist = artist_name
+      song.loading_artist = false
+
+    rescue Net::TimeoutError, Net::OpenTimeout, Errno::ETIMEDOUT
+      retries += 1
+      if retries <= 1
+        sleep(0.5)
+        retry
+      else
+        cache_artist_safely(song.id, "タイムアウト")
+        song.artist = "タイムアウト"
+        song.loading_artist = false
+      end
+    rescue StandardError
+      cache_artist_safely(song.id, "情報取得エラー")
+      song.artist = "情報取得エラー"
+      song.loading_artist = false
+    end
+  end
+
+  # スレッドセーフなキャッシュ保存
+  # 競合状態を考慮してリトライ処理
+  def cache_artist_safely(work_id, artist_name)
+    retries = 0
+    begin
+      ArtistCache.cache_artist(work_id, artist_name)
+    rescue ActiveRecord::RecordNotUnique, ActiveRecord::RecordInvalid
+      retries += 1
+      retry if retries < 2
+    end
+  end
+
+
+  # Work情報のみを使用した高速パース
+  # アーティスト情報の取得をスキップ
+  def parse_works_response_fast(response)
+    works = response.dig("works") || []
+
+    works.map do |work|
+      Song.new(
+        id: work["id"],
+        title: work["title"],
+        artist: "",
+        type: work["type"],
+        composers: extract_composers(work),
+        lyricists: extract_lyricists(work),
+        loading_artist: true
+      )
     end.compact
   end
 
+  # Work詳細データをSongオブジェクトに変換
   def parse_work_detail(work_data)
     Song.new(
       id: work_data["id"],
@@ -278,179 +392,84 @@ class MusicBrainzService
     )
   end
 
+  # Workデータからアーティスト情報を抽出
+  # Recordingの演奏者情報を取得して使用
   def extract_artist_from_work(work)
-    # WorkのAPIレスポンスではアーティスト情報が限定的
-    # そのため、RecordingからアーティストID情報を取得
     relations = work.dig("relations") || []
     work_title = work["title"]
-    
-    Rails.logger.info "Relations count: #{relations.size}"
-    Rails.logger.info "Work title: #{work_title}"
-    
-    # パフォーマンス関係のレコーディングを取得
+
+
     performances = relations.select { |rel| rel["type"] == "performance" }
-    
-    # カバー、インストゥルメンタル、パーシャルでないオリジナルを優先
-    # その中でもタイトルが一致するものを最優先
-    best_recording = performances.min_by do |perf|
+
+    original_performances = performances.select { |perf|
       attributes = perf["attributes"] || []
+      attributes.empty?
+    }
+    target_performances = original_performances.any? ? original_performances : performances
+
+    best_recording = target_performances.min_by do |perf|
       recording_title = perf.dig("recording", "title") || ""
-      
-      priority = 0
-      # オリジナル以外の属性にペナルティを設定
-      priority += 100 if attributes.include?("cover")
-      priority += 100 if attributes.include?("instrumental")
-      priority += 100 if attributes.include?("partial")
-      priority += 100 if attributes.include?("live")
-      priority += 100 if attributes.include?("karaoke")
-      priority += 50 if attributes.include?("medley")
-      priority += 50 if attributes.include?("remix")
-      priority += 50 if attributes.include?("acoustic")
-      
-      # 属性がない（オリジナル）場合は最優先
-      priority -= 500 if attributes.empty?
-      
-      # タイトルが完全一致する場合は優先度を上げる
-      # 全角・半角の違いを吸収するため正規化して比較
-      normalized_work_title = work_title.tr('！', '!').tr('　', ' ')
-      normalized_rec_title = recording_title.tr('！', '!').tr('　', ' ')
-      priority -= 1000 if normalized_work_title == normalized_rec_title
-      
-      priority
+
+      normalized_work_title = work_title.tr("！", "!").tr("　", " ").downcase
+      normalized_rec_title = recording_title.tr("！", "!").tr("　", " ").downcase
+
+      if normalized_work_title == normalized_rec_title
+        0
+      elsif normalized_rec_title.include?(normalized_work_title)
+        1
+      else
+        2
+      end
     end
-    
+
     recording_id = best_recording&.dig("recording", "id")
-    
-    Rails.logger.info "Selected recording: #{best_recording&.dig('recording', 'title')}" if best_recording
-    Rails.logger.info "Recording ID: #{recording_id}"
-    
+
+
     if recording_id
-      # Recording APIから演奏アーティストを取得
       fetch_artist_from_recording(recording_id)
     else
       ""
     end
   end
-  
+
+  # Recording IDからアーティスト情報を取得
+  # キャッシュを活用してAPIリクエストを削減
   def fetch_artist_from_recording(recording_id)
+    cache_key = "artist:recording:#{recording_id}"
+    cached_artist = Rails.cache.read(cache_key)
+    return cached_artist if cached_artist
+
     url = "#{BASE_URL}/recording/#{recording_id}"
-    Rails.logger.info "Fetching artist from Recording API: #{url}"
-    
+
     response = @client.get(url, {
       query: {
         fmt: "json",
         inc: "artist-credits"
       },
-      timeout: 30
+      timeout: 1
     })
-    
-    Rails.logger.info "Recording API Response: #{response.code}"
-    
+
+
     if response.success?
       artist_credits = response.parsed_response["artist-credit"] || []
-      
-      # 複数のアーティストをjoinphraseで結合
+
       artist_name = artist_credits.map.with_index do |credit, index|
-        name = credit["name"] || ""
+        name = credit.dig("artist", "name") || credit["name"] || ""
         joinphrase = credit["joinphrase"] || ""
         "#{name}#{joinphrase}"
       end.join
-      
-      Rails.logger.info "Artist found: #{artist_name}"
+
+
+      Rails.cache.write(cache_key, artist_name, expires_in: 24.hours)
+
       artist_name
     else
-      Rails.logger.error "Recording API failed: #{response.code}"
       ""
     end
-  rescue StandardError => e
-    Rails.logger.error "Recording API Error: #{e.message}"
+  rescue StandardError
     ""
   end
 
-  def search_via_recordings(title, artist = nil)
-    query = title
-    query += " AND artist:\"#{escape_query(artist)}\"" if artist.present?
-    
-    url = "#{BASE_URL}/recording"
-    Rails.logger.info "Trying recording search: #{url}"
-    Rails.logger.info "Recording query: #{query}"
-    
-    response = @client.get(url, {
-      query: {
-        query: query,
-        fmt: "json",
-        inc: "work-rels",
-        limit: 10
-      },
-      timeout: 30
-    })
-    
-    if response.success?
-      recordings = response.parsed_response.dig("recordings") || []
-      
-      # タイトルの完全一致を優先し、カバー版を除外してソート
-      sorted_recordings = recordings.sort_by do |recording|
-        rec_title = recording["title"] || ""
-        relations = recording["relations"] || []
-        work_relation = relations.find { |rel| rel["type"] == "performance" }
-        attributes = work_relation ? work_relation["attributes"] || [] : []
-        
-        priority = 0
-        # 完全一致でない場合は優先度を下げる
-        priority += 1000 unless rec_title.downcase == title.downcase
-        # オリジナル以外の属性にペナルティを設定
-        priority += 100 if attributes.include?("cover")
-        priority += 100 if attributes.include?("instrumental")
-        priority += 100 if attributes.include?("live")
-        priority += 100 if attributes.include?("karaoke")
-        priority += 50 if attributes.include?("medley")
-        priority += 50 if attributes.include?("remix")
-        priority += 50 if attributes.include?("acoustic")
-        priority += 50 if attributes.include?("partial")
-        
-        # 属性がない（オリジナル）場合は最優先
-        priority -= 500 if attributes.empty?
-        
-        priority
-      end
-      
-      # RecordingからWork情報を取得、Work関連がない場合もRecordingとして返す
-      sorted_recordings.map do |recording|
-        relations = recording["relations"] || []
-        work_relation = relations.find { |rel| rel["type"] == "performance" }
-        
-        if work_relation
-          work_id = work_relation.dig("work", "id")
-          if work_id
-            # Workが存在する場合はWork情報を取得
-            find_work_by_id(work_id)
-          else
-            # Work IDがない場合はRecordingとして処理
-            create_song_from_recording(recording)
-          end
-        else
-          # Work関連がない場合はRecordingとして処理
-          create_song_from_recording(recording)
-        end
-      end.compact
-    else
-      []
-    end
-  rescue StandardError => e
-    Rails.logger.error "Recording search error: #{e.message}"
-    []
-  end
-
-  def create_song_from_recording(recording)
-    Song.new(
-      id: recording["id"],
-      title: recording["title"],
-      artist: recording.dig("artist-credit", 0, "name") || "",
-      type: "Recording",
-      composers: [],
-      lyricists: []
-    )
-  end
 
   def extract_composers(work)
     extract_artists_by_type(work, "composer")
