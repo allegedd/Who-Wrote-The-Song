@@ -68,44 +68,70 @@ class MusicBrainzService
     nil
   end
 
-  def find_recording_by_id(mbid)
-    url = "#{BASE_URL}/recording/#{mbid}"
-    Rails.logger.info "Finding recording by ID: #{url}"
-    
-    response = @client.get(url, {
+
+  # アーティストIDから作品一覧を高速取得
+  # 詳細情報の取得をスキップして高速化
+  def find_artist_works_fast(artist_mbid, limit = 10)
+    query = "arid:#{artist_mbid}"
+
+    response = @client.get("#{BASE_URL}/work", {
       query: {
+        query: query,
         fmt: "json",
-        inc: "work-rels+artist-credits"
+        inc: "artist-rels",
+        limit: limit
       },
-      timeout: 30
+      timeout: 15
     })
 
-    Rails.logger.info "Recording detail API Response: #{response.code}"
-
     if response.success?
-      recording_data = response.parsed_response
-      
-      # Recording から Work への関連があるかチェック
-      relations = recording_data["relations"] || []
-      work_relation = relations.find { |rel| rel["type"] == "performance" }
-      
-      if work_relation && work_relation["work"]
-        # Work情報がある場合は、Work詳細を取得
-        work_id = work_relation["work"]["id"]
-        Rails.logger.info "Found work relation, fetching work: #{work_id}"
-        find_work_by_id(work_id)
-      else
-        # Work情報がない場合は、Recording情報から Song を作成
-        Rails.logger.info "No work relation found, creating song from recording"
-        create_song_from_recording(recording_data)
-      end
+      parse_works_response_fast(response.parsed_response)
     else
-      Rails.logger.error "Recording API Error: #{response.code} - #{response.message}"
-      nil
+      Rails.logger.error "MusicBrainz API Error: #{response.code} - #{response.message}"
+      []
     end
   rescue StandardError => e
-    Rails.logger.error "Recording Service Error: #{e.message}"
-    nil
+    Rails.logger.error "MusicBrainz Service Error: #{e.message}"
+    []
+  end
+
+  private # ===== プライベートメソッド =====
+
+  # Work APIのみを使用した検索
+  # タイトルとアーティストで作品を検索
+  def search_works_only(title, artist = nil)
+    query = build_work_query(title, artist)
+    url = "#{BASE_URL}/work"
+
+
+    response = @client.get(url, {
+      query: {
+        query: query,
+        fmt: "json",
+        inc: "artist-rels+recording-rels",
+        limit: 10,
+        sort: "score"
+      },
+      timeout: 1
+    })
+
+
+    if response.success?
+      works = parse_works_response(response.parsed_response)
+
+      if artist.present?
+        filtered_works = filter_works_by_artist(works, artist)
+        works = filtered_works
+      end
+
+      works.uniq { |song| song.id }
+    else
+      Rails.logger.error "Work API Error: #{response.code} - #{response.message}"
+      []
+    end
+  rescue StandardError => e
+    Rails.logger.error "Work Search Error: #{e.message}"
+    []
   end
 
   def find_artist_works(artist_mbid, limit = 10)
