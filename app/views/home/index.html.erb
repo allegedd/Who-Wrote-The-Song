@@ -1,5 +1,61 @@
-<div>
-  <h1 class="text-4xl text-green-700 font-semibold underline">Hello,world</h1>
-  <p>Find me in app/views/home/index.html.erb</p>
+<div class="min-h-screen bg-gray-950">
+  <div class="container mx-auto px-4 py-16">
+    <div class="text-center mb-16">
+      <h1 class="text-5xl font-bold text-gray-100 mb-4">
+        誰が作った曲か<br>
+        <span class="bg-gradient-to-r from-green-400 to-blue-500 text-transparent bg-clip-text">発見しよう</span>
+      </h1>
+      <p class="text-xl text-gray-400 mt-6">
+        お気に入りの曲の作曲家・作詞家から楽曲を見つける
+      </p>
+    </div>
+    
+    <div class="max-w-2xl mx-auto">
+      <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border border-gray-800">
+        <%= form_with url: search_songs_path, method: :get, local: true, class: "space-y-4" do |f| %>
+          <div>
+            <%= f.label :title, "曲名を入力", class: "block text-gray-300 text-sm font-medium mb-2" %>
+            <%= f.text_field :title, placeholder: "例: Lemon", class: "w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500 transition-colors text-gray-100 placeholder-gray-500", required: true %>
+          </div>
+          <div>
+            <%= f.label :artist, "アーティスト名（任意）", class: "block text-gray-300 text-sm font-medium mb-2" %>
+            <%= f.text_field :artist, placeholder: "例: 米津玄師", class: "w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500 transition-colors text-gray-100 placeholder-gray-500" %>
+          </div>
+          <%= f.submit "検索する", class: "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] cursor-pointer" %>
+        <% end %>
+      </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="text-green-500 mb-4">
+          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-100 mb-2">簡単検索</h3>
+        <p class="text-gray-400">作曲家・作詞家を発見、クリエイターの他の作品を試聴</p>
+      </div>
+      
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="text-blue-500 mb-4">
+          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-100 mb-2">お気に入り登録</h3>
+        <p class="text-gray-400">気に入った曲をお気に入りに保存（準備中）</p>
+      </div>
+      
+      <div class="bg-gray-900 rounded-xl p-6 border border-gray-800">
+        <div class="text-purple-500 mb-4">
+          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path>
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-100 mb-2">プレイリスト作成</h3>
+        <p class="text-gray-400">同じクリエイターの曲でプレイリストを作成（準備中）</p>
+      </div>
+    </div>
+  </div>
 </div>
-<button class="btn btn-primary">Hello daisyUI!</button>
