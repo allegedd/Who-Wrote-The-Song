@@ -1,0 +1,512 @@
+<div class="min-h-screen bg-gray-950 pt-8">
+  <div class="container mx-auto px-4 max-w-4xl">
+    <% if @song.present? %>
+      <!-- 楽曲基本情報 -->
+      <div class="bg-gray-900 rounded-lg p-6 mb-8 border border-gray-800">
+        <h1 class="text-3xl font-bold text-gray-100 mb-4">
+          <%= @song.title %>
+        </h1>
+        <% if @song.artist.present? %>
+          <p class="text-lg text-gray-300">
+            アーティスト: <span class="text-gray-100 font-medium"><%= @song.artist %></span>
+          </p>
+        <% end %>
+      </div>
+
+      <!-- クリエイター情報 -->
+      <% if @song.same_creator? %>
+        <!-- 作詞作曲が同じ人物 -->
+        <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+          <% @song.composers.each do |composer| %>
+            <div class="mb-6">
+              <div class="flex items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-100 mr-3">作詞作曲:</h2>
+                <p class="text-lg text-gray-200 font-medium">
+                  <%= composer[:name] %>
+                </p>
+              </div>
+              
+              <div class="border-t border-gray-800 pt-4">
+                <h3 class="text-gray-400 mb-3">他の作品</h3>
+                <% composer_data = @composer_works[composer[:name]] %>
+                <% if composer_data && composer_data[:initial].any? %>
+                  <div class="max-h-64 overflow-y-auto space-y-3" id="composer-<%= composer[:name].parameterize %>-inline-works">
+                    <% composer_data[:initial].each do |work| %>
+                      <%= render 'work_item', work: work %>
+                    <% end %>
+                  </div>
+                  <% if composer_data[:has_more] %>
+                    <div class="mt-4 text-center">
+                      <%= button_tag "もっと見る", 
+                          type: "button",
+                          class: "text-green-500 hover:text-green-400 font-medium transition-colors duration-200 text-sm",
+                          data: { 
+                            artist_id: composer_data[:mbid],
+                            artist_name: composer[:name],
+                            artist_type: "composer",
+                            current_song_id: @song.id,
+                            target: "composer-#{composer[:name].parameterize}-inline-works"
+                          },
+                          onclick: "loadMoreWorks(this)" %>
+                    </div>
+                  <% end %>
+                <% else %>
+                  <div class="text-gray-500 text-center py-4">
+                    <p class="text-sm">他の作品が見つかりませんでした</p>
+                  </div>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <!-- 作曲家セクション -->
+        <% if @song.composers.present? %>
+          <div class="bg-gray-900 rounded-lg p-6 mb-6 border border-gray-800">
+            <% @song.composers.each do |composer| %>
+              <div class="mb-6 last:mb-0">
+                <div class="flex items-center mb-4">
+                  <h2 class="text-xl font-semibold text-gray-100 mr-3">作曲:</h2>
+                  <p class="text-lg text-gray-200 font-medium">
+                    <%= composer[:name] %>
+                  </p>
+                </div>
+                
+                <div class="border-t border-gray-800 pt-4">
+                  <h3 class="text-gray-400 mb-3">他の作品</h3>
+                  <% composer_data = @composer_works[composer[:name]] %>
+                  <% if composer_data && composer_data[:initial].any? %>
+                    <div class="max-h-64 overflow-y-auto space-y-3" id="composer-<%= composer[:name].parameterize %>-separate-works">
+                      <% composer_data[:initial].each do |work| %>
+                        <%= render 'work_item', work: work %>
+                      <% end %>
+                    </div>
+                    <% if composer_data[:has_more] %>
+                      <div class="mt-4 text-center">
+                        <%= button_tag "もっと見る", 
+                            type: "button",
+                            class: "text-green-500 hover:text-green-400 font-medium transition-colors duration-200 text-sm",
+                            data: { 
+                              artist_id: composer_data[:mbid],
+                              artist_name: composer[:name],
+                              artist_type: "composer",
+                              current_song_id: @song.id,
+                              target: "composer-#{composer[:name].parameterize}-separate-works"
+                            },
+                            onclick: "loadMoreWorks(this)" %>
+                      </div>
+                    <% end %>
+                  <% else %>
+                    <div class="text-gray-500 text-center py-4">
+                      <p class="text-sm">他の作品が見つかりませんでした</p>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <!-- 作詞家セクション -->
+        <% if @song.lyricists.present? %>
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800">
+            <% @song.lyricists.each do |lyricist| %>
+              <div class="mb-6 last:mb-0">
+                <div class="flex items-center mb-4">
+                  <h2 class="text-xl font-semibold text-gray-100 mr-3">作詞:</h2>
+                  <p class="text-lg text-gray-200 font-medium">
+                    <%= lyricist[:name] %>
+                  </p>
+                </div>
+                
+                <div class="border-t border-gray-800 pt-4">
+                  <h3 class="text-gray-400 mb-3">他の作品</h3>
+                  <% lyricist_data = @lyricist_works[lyricist[:name]] %>
+                  <% if lyricist_data && lyricist_data[:initial].any? %>
+                    <div class="max-h-64 overflow-y-auto space-y-3" id="lyricist-<%= lyricist[:name].parameterize %>-separate-works">
+                      <% lyricist_data[:initial].each do |work| %>
+                        <%= render 'work_item', work: work %>
+                      <% end %>
+                    </div>
+                    <% if lyricist_data[:has_more] %>
+                      <div class="mt-4 text-center">
+                        <%= button_tag "もっと見る", 
+                            type: "button",
+                            class: "text-green-500 hover:text-green-400 font-medium transition-colors duration-200 text-sm",
+                            data: { 
+                              artist_id: lyricist_data[:mbid],
+                              artist_name: lyricist[:name],
+                              artist_type: "lyricist",
+                              current_song_id: @song.id,
+                              target: "lyricist-#{lyricist[:name].parameterize}-separate-works"
+                            },
+                            onclick: "loadMoreWorks(this)" %>
+                      </div>
+                    <% end %>
+                  <% else %>
+                    <div class="text-gray-500 text-center py-4">
+                      <p class="text-sm">他の作品が見つかりませんでした</p>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+      <% end %>
+
+      <!-- クリエイター情報なし -->
+      <% if @song.composers.blank? && @song.lyricists.blank? %>
+        <div class="bg-gray-900 rounded-lg p-8 text-center border border-gray-800">
+          <p class="text-gray-400 mb-4">
+            作曲家・作詞家の情報がまだ登録されていません。
+          </p>
+        </div>
+      <% end %>
+    <% end %>
+
+
+    <!-- 戻るボタン -->
+    <div class="mt-8 text-center">
+      <%= link_to "検索画面に戻る", root_path, class: "text-green-500 hover:text-green-400 font-medium" %>
+    </div>
+  </div>
+</div>
+
+<script>
+  console.log('Script loaded successfully');
+  
+  function loadInitialWorks(button) {
+    const artistId = button.dataset.artistId;
+    const artistName = button.dataset.artistName;
+    const artistType = button.dataset.artistType;
+    const currentSongId = button.dataset.currentSongId;
+    const targetId = button.dataset.target;
+    
+    // ローディング表示
+    button.innerHTML = '読み込み中...';
+    button.disabled = true;
+    button.classList.add('opacity-50');
+    
+    // Ajax リクエスト（最初の5件）
+    fetch(`/songs/artist_works?artist_id=${artistId}&artist_type=${artistType}&current_song_id=${currentSongId}&offset=0`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById(targetId);
+      const initialButton = document.getElementById(`${targetId.replace('-works', '-initial')}`);
+      const moreButtonContainer = document.getElementById(`${targetId.replace('-works', '-more-button')}`);
+      
+      // 初期の5件を表示
+      const worksToShow = data.works.slice(0, 5);
+      worksToShow.forEach(work => {
+        const workDiv = createWorkElement(work);
+        container.appendChild(workDiv);
+      });
+      
+      // コンテナを表示
+      container.classList.remove('hidden');
+      // 初期ボタンを非表示
+      initialButton.style.display = 'none';
+      
+      // 5件以上ある場合は「もっと見る」ボタンを表示
+      if (data.works.length > 5) {
+        moreButtonContainer.classList.remove('hidden');
+      }
+    })
+    .catch(error => {
+      console.error('Error loading initial works:', error);
+      button.innerHTML = 'もっと見る';
+      button.disabled = false;
+      button.classList.remove('opacity-50');
+      alert('作品の読み込みに失敗しました。');
+    });
+  }
+
+  // loadAllWorksは削除（もっと見るに統一）
+
+  function loadMoreWorks(button) {
+    const artistId = button.dataset.artistId;
+    const artistName = button.dataset.artistName;
+    const artistType = button.dataset.artistType;
+    const currentSongId = button.dataset.currentSongId;
+    const targetId = button.dataset.target;
+    
+    // 既に表示されている作品数を取得
+    const existingWorks = document.querySelectorAll(`#${targetId} .work-item`).length;
+    
+    // ローディング表示の改善
+    const loadingSpan = document.getElementById(`${targetId}-loading`);
+    if (loadingSpan) {
+      loadingSpan.classList.remove('hidden');
+    }
+    button.innerHTML = '読み込み中... <span class="animate-pulse">⏳</span>';
+    button.disabled = true;
+    button.classList.add('opacity-70');
+    
+    // Ajax リクエスト
+    fetch(`/songs/artist_works?artist_id=${artistId}&artist_type=${artistType}&current_song_id=${currentSongId}&offset=${existingWorks}`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      const container = document.getElementById(targetId);
+      
+      // 新しい作品を追加（10件分）
+      const fragment = document.createDocumentFragment();
+      data.works.forEach(work => {
+        const workDiv = createWorkElement(work);
+        fragment.appendChild(workDiv);
+      });
+      container.appendChild(fragment);
+      
+      // 新しく追加された要素のアーティスト情報を段階的に読み込み
+      const newElements = container.querySelectorAll('.work-item .artist-loading');
+      if (newElements.length > 0) {
+        const songIds = Array.from(newElements).map(el => 
+          el.closest('[data-artist-info]').dataset.artistInfo
+        );
+        // 段階的読み込みでUX改善
+        loadArtistsProgressively(songIds);
+      }
+      
+      // ローディング非表示
+      if (loadingSpan) {
+        loadingSpan.classList.add('hidden');
+      }
+      
+      // 全て表示したらボタンを非表示
+      if (!data.has_more) {
+        // ボタンの親要素（divコンテナ）を削除
+        const buttonContainer = button.parentElement;
+        if (buttonContainer) {
+          buttonContainer.remove();
+        }
+      } else {
+        button.innerHTML = 'もっと見る';
+        button.disabled = false;
+        button.classList.remove('opacity-70');
+      }
+    })
+    .catch(error => {
+      console.error('Error loading more works:', error);
+      if (loadingSpan) {
+        loadingSpan.classList.add('hidden');
+      }
+      button.innerHTML = 'もっと見る';
+      button.disabled = false;
+      button.classList.remove('opacity-70');
+      alert('作品の読み込みに失敗しました。');
+    });
+  }
+  
+  function createWorkElement(work) {
+    const div = document.createElement('div');
+    div.className = 'bg-gray-800 rounded-lg p-4 work-item';
+    
+    let content = `<h3 class="font-medium text-gray-100 mb-2">${escapeHtml(work.title)}</h3>`;
+    
+    // アーティスト情報（非同期読み込み対応）
+    content += `<p class="text-sm text-gray-400 mb-2" data-artist-info="${work.id}">
+      アーティスト: <span class="text-gray-300 artist-name">${work.artist || '取得中...'}</span>
+      ${(!work.artist || work.artist === '') ? '<span class="artist-loading text-gray-500 text-xs ml-1 animate-pulse">⏳</span>' : ''}
+    </p>`;
+    
+    if (work.creator_names) {
+      content += `<p class="text-sm text-gray-400">${escapeHtml(work.creator_names)}</p>`;
+    }
+    
+    div.innerHTML = content;
+    
+    // アーティスト情報の遅延読み込みは、全てのDOM追加後に一括実行するため、ここでは実行しない
+    
+    return div;
+  }
+
+  // アーティスト情報を段階的に読み込む関数（UX最適化版）
+  function loadArtistsProgressively(songIds) {
+    if (songIds.length === 0) return;
+    
+    // より小さなバッチサイズでスムーズな表示
+    const batchSize = 8; // バッチサイズを削減してより頻繁に更新
+    
+    // 最初のバッチを即座に処理
+    const firstBatch = songIds.slice(0, batchSize);
+    if (firstBatch.length > 0) {
+      loadArtistsForElements(firstBatch);
+    }
+    
+    // 残りがある場合はより短い間隔で処理
+    const remainingSongIds = songIds.slice(batchSize);
+    if (remainingSongIds.length > 0) {
+      setTimeout(() => {
+        loadArtistsProgressively(remainingSongIds);
+      }, 100); // 0.1秒待機でより滑らかな表示
+    }
+  }
+  
+  // 複数要素のアーティスト情報を一括で読み込む関数
+  function loadArtistsForElements(songIds) {
+    if (songIds.length === 0) return;
+    
+    fetch(`/songs/load_artists?song_ids=${songIds.join(',')}`, {
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      data.artists.forEach(artist => {
+        const elements = document.querySelectorAll(`[data-artist-info="${artist.id}"]`);
+        elements.forEach(element => {
+          const nameSpan = element.querySelector('.artist-name');
+          const loadingSpan = element.querySelector('.artist-loading');
+          
+          if (nameSpan) {
+            nameSpan.textContent = artist.artist;
+            // 取得完了の視覚的フィードバック
+            nameSpan.classList.add('text-green-300');
+            setTimeout(() => {
+              nameSpan.classList.remove('text-green-300');
+              nameSpan.classList.add('text-gray-300');
+            }, 1000);
+          }
+          if (loadingSpan) {
+            loadingSpan.remove();
+          }
+        });
+      });
+    })
+    .catch(error => {
+      console.error('アーティスト情報の読み込みに失敗しました:', error);
+    });
+  }
+  
+  // 単一要素のアーティスト情報を読み込む関数（下位互換のため残す）
+  function loadArtistForElement(songId) {
+    loadArtistsForElements([songId]);
+  }
+  
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // アーティスト情報の非同期読み込み（work_item用）
+  // 重複実行防止のためのフラグ
+  let artistLoadingInProgress = false;
+  
+  // Turbo対応のイベントリスナー
+  function loadArtistsOnPageLoad() {
+    console.log('loadArtistsOnPageLoad called');
+    
+    // 既に読み込み中の場合は実行しない
+    if (artistLoadingInProgress) {
+      console.log('Artist loading already in progress, skipping...');
+      return;
+    }
+    
+    // 少し待ってから実行（DOMの完全な構築を待つ）
+    setTimeout(function() {
+      // 再度チェック（setTimeout後に他の処理が開始されている可能性）
+      if (artistLoadingInProgress) {
+        console.log('Artist loading started by another process, skipping...');
+        return;
+      }
+      
+      console.log('Starting artist loading process...');
+      artistLoadingInProgress = true;
+      
+      const artistElements = document.querySelectorAll('[data-artist-info]');
+      console.log(`Found ${artistElements.length} total elements with data-artist-info`);
+      
+      const loadingArtists = Array.from(artistElements).filter(el => 
+        el.querySelector('.artist-loading')
+      );
+      
+      console.log(`Found ${loadingArtists.length} elements with loading artists`);
+      
+      if (loadingArtists.length > 0) {
+        // 読み込み中のアーティスト情報のIDを収集
+        const songIds = loadingArtists.map(el => el.dataset.artistInfo);
+        console.log('Loading artists for song IDs:', songIds);
+        
+        // 非同期でアーティスト情報を取得
+        fetch(`/songs/load_artists?song_ids=${songIds.join(',')}`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Received artist data:', data);
+        // アーティスト情報を更新
+        data.artists.forEach(artist => {
+          const elements = document.querySelectorAll(`[data-artist-info="${artist.id}"]`);
+          console.log(`Updating ${elements.length} elements for song ${artist.id}`);
+          elements.forEach(element => {
+            const nameSpan = element.querySelector('.artist-name');
+            const loadingSpan = element.querySelector('.artist-loading');
+            
+            if (nameSpan) {
+              nameSpan.textContent = artist.artist;
+            }
+            if (loadingSpan) {
+              loadingSpan.remove();
+            }
+          });
+        });
+        // 処理完了後にフラグをリセット
+        artistLoadingInProgress = false;
+      })
+      .catch(error => {
+        console.error('アーティスト情報の読み込みに失敗しました:', error);
+        // エラー時は読み込み中アイコンを削除
+        loadingArtists.forEach(el => {
+          const loadingSpan = el.querySelector('.artist-loading');
+          if (loadingSpan) {
+            loadingSpan.remove();
+          }
+        });
+        // エラー時もフラグをリセット
+        artistLoadingInProgress = false;
+      });
+      } else {
+        // 読み込み対象がない場合もフラグをリセット
+        artistLoadingInProgress = false;
+      }
+    }, 300); // 0.3秒待機に短縮してからアーティスト情報を読み込み
+  }
+
+  // ページ遷移時にフラグをリセット
+  document.addEventListener('turbo:before-visit', function() {
+    artistLoadingInProgress = false;
+  });
+  
+  // 複数のイベントに対応（Turbo対応）
+  document.addEventListener('DOMContentLoaded', loadArtistsOnPageLoad);
+  document.addEventListener('turbo:load', loadArtistsOnPageLoad);
+  document.addEventListener('turbo:render', loadArtistsOnPageLoad);
+  
+  // 即座に実行も試す（既にDOMが読み込まれている場合）
+  if (document.readyState === 'loading') {
+    console.log('Document is loading');
+  } else {
+    console.log('Document already loaded, executing immediately');
+    loadArtistsOnPageLoad();
+  }
+</script>

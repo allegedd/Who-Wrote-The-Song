@@ -1,0 +1,16 @@
+<div class="bg-gray-800 rounded-lg p-4 work-item">
+  <h3 class="font-medium text-gray-100 mb-2"><%= work.title %></h3>
+  <p class="text-sm text-gray-400 mb-2" data-artist-info="<%= work.id %>">
+    アーティスト: <span class="text-gray-300 artist-name">
+      <%= work.artist.present? ? work.artist : "読み込み中..." %>
+    </span>
+    <% if work.loading_artist || work.artist.blank? %>
+      <span class="artist-loading text-gray-500 text-xs ml-1">🔄</span>
+    <% end %>
+  </p>
+  <% if work.creator_names.present? %>
+    <p class="text-sm text-gray-400">
+      <%= work.creator_names %>
+    </p>
+  <% end %>
+</div>
