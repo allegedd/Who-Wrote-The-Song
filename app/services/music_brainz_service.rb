@@ -228,6 +228,24 @@ class MusicBrainzService
     text.gsub('"', '\"')
   end
 
+  # アーティスト名でWorkをフィルタリング
+  # 演奏者、作曲者、作詞者でマッチング
+  def filter_works_by_artist(works, target_artist)
+    works.select do |song|
+      artist_match = song.artist&.include?(target_artist)
+      composer_match = song.composers.any? { |c| c[:name]&.include?(target_artist) }
+      lyricist_match = song.lyricists.any? { |l| l[:name]&.include?(target_artist) }
+
+      artist_match || composer_match || lyricist_match
+    end
+  end
+
+  def extract_artist_from_work_search(work)
+    ""
+  end
+
+  # Work APIのレスポンスをパース
+  # Songオブジェクトの配列を生成し、スコア順でソート
   def parse_works_response(response)
     works = response.dig("works") || []
     
