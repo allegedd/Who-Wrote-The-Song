@@ -134,26 +134,70 @@ class MusicBrainzService
     []
   end
 
-  def find_artist_works(artist_mbid, limit = 10)
-    query = "arid:#{artist_mbid}"
-    
-    response = @client.get("#{BASE_URL}/work", {
+  # Recording APIを使用してWorkを検索
+  # 特定のアーティストによる録音からWork情報を取得
+  def search_recordings_for_works(title, artist)
+    query = "recording:\"#{escape_query(title)}\" AND artist:\"#{escape_query(artist)}\""
+    url = "#{BASE_URL}/recording"
+
+
+    # Step 1: Search for recordings (without relations)
+    response = @client.get(url, {
       query: {
         query: query,
         fmt: "json",
-        limit: limit
+        inc: "artist-credits",
+        limit: 5,
+        sort: "score"
       },
-      timeout: 30
+      timeout: 1
     })
 
     if response.success?
-      parse_works_response(response.parsed_response)
+      recordings = response.parsed_response.dig("recordings") || []
+
+      works = []
+      recordings.each do |recording|
+        recording_id = recording["id"]
+        next unless recording_id
+
+        detail_response = @client.get("#{BASE_URL}/recording/#{recording_id}", {
+          query: {
+            fmt: "json",
+            inc: "artist-credits+work-rels"
+          },
+          timeout: 2
+        })
+
+        if detail_response.success?
+          detailed_recording = detail_response.parsed_response
+          work_relations = (detailed_recording["relations"] || []).select { |r| r["type"] == "performance" && r["target-type"] == "work" }
+
+
+          work_relations.each do |rel|
+            work_data = rel["work"]
+            next unless work_data
+
+            artist_name = extract_artist_from_recording(detailed_recording)
+
+            works << Song.new(
+              id: work_data["id"],
+              title: work_data["title"],
+              artist: artist_name,
+              type: work_data["type"] || "Song",
+              composers: [],
+              lyricists: []
+            )
+          end
+        else
+        end
+      end
+
+      works.uniq { |song| song.id }
     else
-      Rails.logger.error "MusicBrainz API Error: #{response.code} - #{response.message}"
       []
     end
-  rescue StandardError => e
-    Rails.logger.error "MusicBrainz Service Error: #{e.message}"
+  rescue StandardError
     []
   end
 
