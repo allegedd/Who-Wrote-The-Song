@@ -7,107 +7,58 @@ class MusicBrainzService
     @client = HTTParty
   end
 
+  # 作品検索のメインメソッド
+  # タイトルとアーティストで検索し、Work検索とRecording検索を組み合わせて結果を返す
   def search_works(title, artist = nil)
-    # アーティスト名が指定されている場合は、Recording検索を優先
-    if artist.present?
-      Rails.logger.info "Artist specified, using recording search for: #{title} by #{artist}"
-      recording_results = search_via_recordings(title, artist)
-      
-      # Recording検索で完全一致が見つかった場合
-      title_matches = recording_results.select { |rec| rec.title.downcase == title.downcase }
-      if title_matches.any?
-        # アーティスト名も一致するものを最優先
-        exact_matches = title_matches.select { |rec| 
-          rec.artist.downcase.include?(artist.downcase) || 
-          artist.downcase.include?(rec.artist.downcase.split.first || "")
-        }
-        
-        if exact_matches.any?
-          # 完全一致があればそれを返す
-          exact_matches.uniq { |rec| [rec.title.downcase, rec.artist.downcase] }
-        else
-          # タイトル一致のみの場合
-          title_matches.uniq { |rec| [rec.title.downcase, rec.artist.downcase] }
-        end
+    start_time = Time.current
+
+    if title.present? && artist.present?
+      work_results = search_works_only(title, artist)
+
+      elapsed = (Time.current - start_time) * 1000
+      if elapsed > 1500
+        return work_results.take(10)
+      end
+
+      recording_results = search_recordings_for_works(title, artist)
+
+      if recording_results.any?
+        combined_results = (recording_results + work_results).uniq { |song| song.id }
+        combined_results.take(10)
       else
-        # タイトル一致がない場合は全ての結果を返す
-        recording_results.uniq { |rec| [rec.title.downcase, rec.artist.downcase] }
+        work_results.take(10)
       end
     else
-      # アーティスト名が指定されていない場合は従来のWork検索
-      query = build_work_query(title, artist)
-      url = "#{BASE_URL}/work"
-      
-      Rails.logger.info "MusicBrainz API Request: GET #{url}"
-      Rails.logger.info "Query: #{query}"
-      
-      response = @client.get(url, {
-        query: {
-          query: query,
-          fmt: "json",
-          inc: "artist-rels+recording-rels",
-          limit: 10
-        },
-        timeout: 30
-      })
-
-      Rails.logger.info "MusicBrainz API Response: #{response.code}"
-      Rails.logger.info "Response Body: #{response.body[0..500]}..." if response.body
-
-      if response.success?
-        works = parse_works_response(response.parsed_response)
-        
-        # 完全一致のWorkがない場合、Recordingで検索を試みる
-        exact_match = works.find { |work| work.title.downcase == title.downcase }
-        
-        if exact_match.nil?
-          Rails.logger.info "No exact work match found, trying recording search for: #{title}"
-          recording_results = search_via_recordings(title, artist)
-          
-          # Recording検索で完全一致が見つかった場合は、それらを最優先にする
-          exact_recordings = recording_results.select { |rec| rec.title.downcase == title.downcase }
-          if exact_recordings.any?
-            # タイトルとアーティストの組み合わせで重複を除去
-            unique_recordings = exact_recordings.uniq { |rec| [rec.title.downcase, rec.artist.downcase] }
-            # 完全一致のRecordingを最初に、その後にWork検索の結果を追加
-            unique_recordings + works.reject { |w| w.title.downcase == title.downcase }
-          else
-            # 完全一致がない場合は通常のWork検索結果を返す
-            works
-          end
-        else
-          works
-        end
-      else
-        Rails.logger.error "MusicBrainz API Error: #{response.code} - #{response.message}"
-        []
-      end.then do |results|
-        # 最終的な結果からタイトルとアーティストの組み合わせで重複を除去
-        results.uniq { |song| [song.title.downcase, song.artist.downcase] }
-      end
+      search_works_only(title, artist).take(10)
     end
-  rescue StandardError => e
-    Rails.logger.error "MusicBrainz Service Error: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    []
   end
 
+  # Work IDから詳細情報を取得
+  # キャッシュを活用して高速化
   def find_work_by_id(mbid)
+    cache_key = "work:#{mbid}"
+    cached_work = Rails.cache.read(cache_key)
+    return cached_work if cached_work
+
     url = "#{BASE_URL}/work/#{mbid}"
-    Rails.logger.info "Finding work by ID: #{url}"
-    
+
     response = @client.get(url, {
       query: {
         fmt: "json",
         inc: "artist-rels+recording-rels"
       },
-      timeout: 30
+      timeout: 1
     })
 
-    Rails.logger.info "Work detail API Response: #{response.code}"
-
     if response.success?
-      parse_work_detail(response.parsed_response)
+      work = parse_work_detail(response.parsed_response)
+
+      if work
+        Rails.cache.write(cache_key, work, expires_in: 24.hours)
+        Rails.cache.write("song_artist:#{mbid}", work.artist, expires_in: 1.hour)
+      end
+
+      work
     else
       Rails.logger.error "MusicBrainz API Error: #{response.code} - #{response.message}"
       nil
