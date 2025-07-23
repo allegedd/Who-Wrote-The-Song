@@ -12,4 +12,13 @@ Rails.application.routes.draw do
 
   # Defines the root path route ("/")
   root "home#index"
+
+  # Song search routes
+  resources :songs, only: [ :index, :show ] do
+    collection do
+      get :search
+      get :artist_works
+      get :load_artists  # アーティスト情報の非同期読み込み用
+    end
+  end
 end
