@@ -1,0 +1,166 @@
+<div class="min-h-screen bg-gray-950 pt-8">
+  <div class="container mx-auto px-4">
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-100 mb-4">検索結果</h1>
+      
+      <% if params[:title].present? %>
+        <p class="text-gray-400">
+          「<span class="text-gray-200 font-medium"><%= params[:title] %></span>」
+          <% if params[:artist].present? %>
+            （アーティスト: <span class="text-gray-200 font-medium"><%= params[:artist] %></span>）
+          <% end %>
+          の検索結果
+        </p>
+      <% end %>
+    </div>
+
+    <% if @songs.present? %>
+      <div class="grid gap-4">
+        <% @songs.each do |song| %>
+          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800 hover:border-gray-700 transition-colors">
+            <%= link_to song_path(song.id), class: "block" do %>
+              <div class="flex justify-between items-start">
+                <div>
+                  <h2 class="text-xl font-semibold text-gray-100 mb-2">
+                    <%= song.title %>
+                  </h2>
+                  <p class="text-gray-400 mb-2" data-artist-info="<%= song.id %>">
+                    アーティスト: <span class="text-gray-300 artist-name">
+                      <%= song.artist.present? ? song.artist : "読み込み中..." %>
+                    </span>
+                    <% if song.loading_artist || song.artist.blank? %>
+                      <span class="artist-loading text-gray-500 text-sm ml-2">🔄</span>
+                    <% end %>
+                  </p>
+                  <% if song.creator_names.present? %>
+                    <p class="text-sm text-gray-400 mt-2">
+                      <%= song.creator_names %>
+                    </p>
+                  <% else %>
+                    <p class="text-sm text-gray-500 mt-2">
+                      ※作詞作曲情報なし
+                    </p>
+                  <% end %>
+                </div>
+                <div class="text-green-500">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+        
+        <!-- 検索結果が上限に達している場合の誘導 -->
+        <% if @songs.present? && @songs.size >= 10 && params[:artist].blank? %>
+          <div class="bg-gray-800 rounded-lg p-6 mt-6 border border-gray-700">
+            <h3 class="text-lg font-medium text-gray-100 mb-3">🔍 お探しの楽曲が見つからない場合</h3>
+            <p class="text-gray-300 mb-4">
+              同じタイトルの楽曲が多数あるため、10件のみ表示しています。<br>
+              <span class="text-green-400">アーティスト名を追加</span>することで、お探しの楽曲を見つけやすくなります。
+            </p>
+            <form method="GET" action="<%= songs_path %>" class="flex gap-3">
+              <input type="hidden" name="title" value="<%= params[:title] %>">
+              <input type="text" name="artist" placeholder="例: YOASOBI、米津玄師、Official髭男dism" 
+                     class="flex-1 px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+              <button type="submit" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900 transition-colors">
+                絞り込み検索
+              </button>
+            </form>
+            <p class="text-xs text-gray-500 mt-2">
+              💡 部分的なアーティスト名でも検索できます（例: 「結束バンド」→「結束」）
+            </p>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="bg-gray-900 rounded-lg p-8 text-center border border-gray-800">
+        <p class="text-gray-400 mb-4">
+          <% if params[:title].present? %>
+            該当する楽曲が見つかりませんでした。
+          <% else %>
+            検索条件を入力してください。
+          <% end %>
+        </p>
+        <%= link_to "検索画面に戻る", root_path, class: "text-green-500 hover:text-green-400 font-medium" %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  console.log('Script loaded in search results page');
+  
+  // アーティスト情報の非同期読み込み
+  function loadArtistsOnSearchPage() {
+    console.log('loadArtistsOnSearchPage called');
+    
+    // 少し待ってから実行（DOMの完全な構築を待つ）
+    setTimeout(function() {
+      const artistElements = document.querySelectorAll('[data-artist-info]');
+      console.log(`Found ${artistElements.length} artist elements`);
+      
+      const loadingArtists = Array.from(artistElements).filter(el => 
+        el.querySelector('.artist-loading')
+      );
+      console.log(`Found ${loadingArtists.length} elements with loading artists`);
+      
+      if (loadingArtists.length > 0) {
+        // 読み込み中のアーティスト情報のIDを収集
+        const songIds = loadingArtists.map(el => el.dataset.artistInfo);
+        console.log('Loading artists for IDs:', songIds);
+        
+        // 非同期でアーティスト情報を取得
+        fetch(`/songs/load_artists?song_ids=${songIds.join(',')}`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        // アーティスト情報を更新
+        data.artists.forEach(artist => {
+          const element = document.querySelector(`[data-artist-info="${artist.id}"]`);
+          if (element) {
+            const nameSpan = element.querySelector('.artist-name');
+            const loadingSpan = element.querySelector('.artist-loading');
+            
+            if (nameSpan) {
+              nameSpan.textContent = artist.artist;
+            }
+            if (loadingSpan) {
+              loadingSpan.remove();
+            }
+          }
+        });
+      })
+      .catch(error => {
+        console.error('アーティスト情報の読み込みに失敗しました:', error);
+        // エラー時は読み込み中アイコンを削除
+        loadingArtists.forEach(el => {
+          const loadingSpan = el.querySelector('.artist-loading');
+          if (loadingSpan) {
+            loadingSpan.remove();
+          }
+        });
+      });
+      }
+    }, 200); // 0.2秒待機に短縮
+  }
+  
+  // Turbo対応のイベントリスナー
+  document.addEventListener('DOMContentLoaded', loadArtistsOnSearchPage);
+  document.addEventListener('turbo:load', loadArtistsOnSearchPage);
+  document.addEventListener('turbo:render', loadArtistsOnSearchPage);
+  
+  // 既にDOMが読み込まれている場合は即座に実行
+  if (document.readyState === 'loading') {
+    console.log('Document is loading');
+  } else {
+    console.log('Document already loaded, executing immediately');
+    loadArtistsOnSearchPage();
+  }
+</script>
