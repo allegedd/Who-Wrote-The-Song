@@ -201,18 +201,30 @@ class MusicBrainzService
     []
   end
 
-  private
+  # Recordingデータからアーティスト名を抽出
+  def extract_artist_from_recording(recording)
+    artist_credits = recording["artist-credit"] || []
+    return "" unless artist_credits.any?
 
+    artist_credits.first["artist"]["name"] rescue ""
+  end
+
+  # 検索クエリを構築
+  # タイトルがある場合はタイトル優先で検索
   def build_work_query(title, artist = nil)
-    # work:フィールドを使用せず、直接タイトルで検索
-    # これによりより柔軟な検索が可能になる
-    query_parts = [ title ]
-    query_parts << "AND artist:\"#{escape_query(artist)}\"" if artist.present?
-    query_parts.join(" ")
+    if title.present? && artist.present?
+      title
+    elsif title.present?
+      title
+    elsif artist.present?
+      escaped_artist = escape_query(artist)
+      "artist:\"#{escaped_artist}\""
+    else
+      "*:*"
+    end
   end
 
   def escape_query(text)
-    # ダブルクオートのみエスケープ
     text.gsub('"', '\"')
   end
 
