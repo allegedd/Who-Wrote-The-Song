@@ -13,12 +13,12 @@ class YoutubeService
     today = Date.current.to_s
     request_count_key = "youtube_requests:#{today}"
     current_count = Rails.cache.read(request_count_key) || 0
-    
+
     if current_count >= 100  # 1日100回制限
       Rails.logger.warn "YouTube API daily limit reached: #{current_count}"
       return false
     end
-    
+
     true
   end
 
@@ -38,7 +38,7 @@ class YoutubeService
 
     # キャッシュキーを生成（APIコスト削減のため）
     cache_key = "youtube_search:#{Digest::MD5.hexdigest("#{artist}:#{title}")}"
-    
+
     # キャッシュから検索結果を取得（24時間保持）
     cached_result = Rails.cache.read(cache_key)
     if cached_result
@@ -54,11 +54,11 @@ class YoutubeService
     # 複数のクエリパターンを試行
     queries = build_search_queries(title, artist)
     last_error = nil
-    
+
     queries.each_with_index do |query, index|
       # APIリクエスト回数をカウント
       increment_request_count
-      
+
       params = {
         part: "snippet",
         q: query,
@@ -75,7 +75,7 @@ class YoutubeService
 
       if response.success?
         result = parse_search_response(response.parsed_response)
-        
+
         # 結果が見つかったら即座に返す
         if result.any?
           Rails.logger.info "YouTube search successful with query: #{query}"
@@ -88,20 +88,20 @@ class YoutubeService
         error_details = response.parsed_response&.dig("error")
         error_message = error_details&.dig("message") || response.message
         error_reason = error_details&.dig("errors", 0, "reason")
-        
+
         Rails.logger.warn "YouTube API error (#{response.code}): #{error_message}"
         Rails.logger.warn "Error reason: #{error_reason}" if error_reason
         Rails.logger.debug "Full error response: #{response.parsed_response.inspect}"
-        
+
         # クォータエラーの場合は即座に返す
         if error_reason == "quotaExceeded"
           return { videos: [], error: "YouTube APIの利用制限に達しました" }
         end
-        
+
         last_error = error_message
       end
     end
-    
+
     Rails.logger.warn "No YouTube results found for: #{title} #{artist}"
     error_result = { videos: [], error: last_error }
     # エラー結果も短時間キャッシュ（1時間、無駄なリクエストを防ぐため）
@@ -118,7 +118,7 @@ class YoutubeService
   # より高い検索精度を実現するためのフォールバック戦略
   def build_search_queries(title, artist)
     queries = []
-    
+
     if artist.present? && title.present?
       # パターン3: シンプルな組み合わせ
       queries << "#{artist} #{title}"
@@ -126,7 +126,7 @@ class YoutubeService
       # タイトルのみの場合
       queries << title
     end
-    
+
     # 空のクエリを除外
     queries.reject(&:blank?)
   end
@@ -136,7 +136,7 @@ class YoutubeService
   # 動画ID、タイトル、チャンネル名、サムネイルを抽出
   def parse_search_response(response)
     items = response.dig("items") || []
-    
+
     items.map do |item|
       {
         video_id: item.dig("id", "videoId"),
