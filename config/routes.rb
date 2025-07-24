@@ -19,6 +19,7 @@ Rails.application.routes.draw do
       get :search
       get :artist_works
       get :load_artists  # アーティスト情報の非同期読み込み用
+      get :youtube_search  # YouTube動画検索用
     end
   end
 end
