@@ -225,6 +225,21 @@ class SongsController < ApplicationController
     }
   end
 
+  # YouTube動画検索エンドポイント
+  # 楽曲のプレビュー用に関連動画を検索
+  def youtube_search
+    title = params[:title]
+    artist = params[:artist]
+
+    youtube_service = YoutubeService.new
+    result = youtube_service.search_videos(title, artist)
+
+    render json: result
+  rescue => e
+    Rails.logger.error "YouTube search controller error: #{e.message}"
+    render json: { videos: [], error: e.message }, status: :ok
+  end
+
   private
 
   def search_songs(title, artist = nil)
