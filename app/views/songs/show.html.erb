@@ -371,12 +371,25 @@
     const div = document.createElement('div');
     div.className = 'bg-gray-800 rounded-lg p-4 work-item';
     
-    let content = `<h3 class="font-medium text-gray-100 mb-2">${escapeHtml(work.title)}</h3>`;
+    // _work_item.html.erbパーシャルと完全に同じ構造を作成
+    let content = `
+      <div class="flex justify-between items-start mb-2">
+        <h3 class="font-medium text-gray-100 flex-1">${escapeHtml(work.title)}</h3>
+        <button class="preview-btn ml-3 p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-full transition-colors"
+                data-title="${escapeHtml(work.title)}"
+                data-artist="${escapeHtml(work.artist || '')}"
+                title="再生">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </button>
+      </div>
+    `;
     
-    // アーティスト情報（非同期読み込み対応）
+    // アーティスト情報（_work_item.html.erbと同じ構造）
     content += `<p class="text-sm text-gray-400 mb-2" data-artist-info="${work.id}">
-      アーティスト: <span class="text-gray-300 artist-name">${work.artist || '取得中...'}</span>
-      ${(!work.artist || work.artist === '') ? '<span class="artist-loading text-gray-500 text-xs ml-1 animate-pulse">⏳</span>' : ''}
+      アーティスト: <span class="text-gray-300 artist-name">${work.artist || '読み込み中...'}</span>
+      ${(!work.artist || work.artist === '') ? '<span class="artist-loading text-gray-500 text-xs ml-1">🔄</span>' : ''}
     </p>`;
     
     if (work.creator_names) {
@@ -385,7 +398,6 @@
     
     div.innerHTML = content;
     
-    // アーティスト情報の遅延読み込みは、全てのDOM追加後に一括実行するため、ここでは実行しない
     
     return div;
   }
@@ -443,6 +455,16 @@
           if (loadingSpan) {
             loadingSpan.remove();
           }
+
+          // 同じwork-item内の再生ボタンのdata-artist属性も更新
+          const workItem = element.closest('.work-item');
+          if (workItem) {
+            const previewBtn = workItem.querySelector('.preview-btn');
+            if (previewBtn && artist.artist) {
+              previewBtn.dataset.artist = artist.artist;
+              console.log(`Updated preview button artist for work ${artist.id}: ${artist.artist}`);
+            }
+          }
         });
       });
     })
@@ -450,12 +472,12 @@
       console.error('アーティスト情報の読み込みに失敗しました:', error);
     });
   }
-  
+
   // 単一要素のアーティスト情報を読み込む関数（下位互換のため残す）
   function loadArtistForElement(songId) {
     loadArtistsForElements([songId]);
   }
-  
+
   function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
@@ -493,9 +515,9 @@
       const loadingArtists = Array.from(artistElements).filter(el => 
         el.querySelector('.artist-loading')
       );
-      
+
       console.log(`Found ${loadingArtists.length} elements with loading artists`);
-      
+
       if (loadingArtists.length > 0) {
         // 読み込み中のアーティスト情報のIDを収集
         const songIds = loadingArtists.map(el => el.dataset.artistInfo);
@@ -525,6 +547,16 @@
             }
             if (loadingSpan) {
               loadingSpan.remove();
+            }
+            
+            // 同じwork-item内の再生ボタンのdata-artist属性も更新
+            const workItem = element.closest('.work-item');
+            if (workItem) {
+              const previewBtn = workItem.querySelector('.preview-btn');
+              if (previewBtn && artist.artist) {
+                previewBtn.dataset.artist = artist.artist;
+                console.log(`Updated preview button artist for work ${artist.id}: ${artist.artist}`);
+              }
             }
           });
         });
@@ -567,4 +599,358 @@
     console.log('Document already loaded, executing immediately');
     loadArtistsOnPageLoad();
   }
+
+  // YouTube フローティングプレイヤー機能（詳細ページ版）
+  let isYouTubePlayerInitialized = false;
+  let previewClickListenerAdded = false;
+  
+  function initYouTubeFloatingPlayer() {
+    console.log('[TURBO DEBUG] initYouTubeFloatingPlayer called, isYouTubePlayerInitialized:', isYouTubePlayerInitialized);
+    
+    if (isYouTubePlayerInitialized) {
+      console.log('[TURBO DEBUG] Already initialized, skipping...');
+      return;
+    }
+    
+    const player = document.getElementById('youtube-floating-player');
+    const playerTitle = document.getElementById('player-title');
+    const videosList = document.getElementById('videos-list');
+    const playerArea = document.getElementById('player-area');
+    const playerContent = document.getElementById('player-content');
+    const youtubeIframe = document.getElementById('youtube-iframe');
+    const closeButton = document.getElementById('close-player');
+    const minimizeButton = document.getElementById('minimize-player');
+    
+    console.log('[TURBO DEBUG] DOM elements check:', {
+      player: !!player,
+      playerTitle: !!playerTitle,
+      videosList: !!videosList,
+      playerArea: !!playerArea,
+      playerContent: !!playerContent,
+      youtubeIframe: !!youtubeIframe,
+      closeButton: !!closeButton,
+      minimizeButton: !!minimizeButton
+    });
+    
+    let isMinimized = false;
+    
+    // 初期化完了フラグを設定
+    isYouTubePlayerInitialized = true;
+    console.log('[TURBO DEBUG] Initialization completed');
+
+    // 再生ボタンのクリックイベント（イベントデリゲーション）
+    if (!previewClickListenerAdded) {
+      previewClickListenerAdded = true;
+      document.addEventListener('click', function(e) {
+        const previewBtn = e.target.closest('.preview-btn');
+        if (previewBtn) {
+          console.log('[TURBO DEBUG] Preview button clicked:', previewBtn);
+          console.log('[TURBO DEBUG] Current state:', {
+            isYouTubePlayerInitialized,
+            previewClickListenerAdded,
+            playerExists: !!document.getElementById('youtube-floating-player')
+          });
+          
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const title = previewBtn.dataset.title;
+          const artist = previewBtn.dataset.artist;
+          
+          console.log('[TURBO DEBUG] Button data:', { title, artist });
+          
+          if (!title) {
+            console.log('[TURBO DEBUG] No title, returning');
+            return;
+          }
+          
+          console.log('[TURBO DEBUG] Calling openFloatingPlayer');
+          openFloatingPlayer(title, artist);
+        }
+      });
+      console.log('[TURBO DEBUG] Click listener added');
+    }
+
+    // フローティングプレイヤーを開く
+    function openFloatingPlayer(title, artist) {
+      console.log('[TURBO DEBUG] openFloatingPlayer called with:', { title, artist });
+      
+      // DOM要素を再取得（Turbo遷移で変わる可能性があるため）
+      const currentPlayer = document.getElementById('youtube-floating-player');
+      const currentPlayerTitle = document.getElementById('player-title');
+      const currentVideosList = document.getElementById('videos-list');
+      
+      console.log('[TURBO DEBUG] Current DOM elements:', {
+        player: !!currentPlayer,
+        playerTitle: !!currentPlayerTitle,
+        videosList: !!currentVideosList,
+        originalPlayer: !!player,
+        originalPlayerTitle: !!playerTitle,
+        originalVideosList: !!videosList
+      });
+      
+      if (!currentPlayer || !currentPlayerTitle || !currentVideosList) {
+        console.log('[TURBO DEBUG] Missing DOM elements, cannot open player');
+        return;
+      }
+      
+      currentPlayerTitle.textContent = `"${title}" の再生`;
+      currentPlayer.classList.remove('hidden');
+      console.log('[TURBO DEBUG] Player shown');
+      
+      // リストビューにリセット
+      showVideosList();
+      
+      // ローディング表示
+      currentVideosList.innerHTML = '<div id="loading-spinner" class="text-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div><p class="text-gray-400 mt-2 text-sm">動画を検索中...</p></div>';
+      console.log('[TURBO DEBUG] Loading spinner set');
+
+      // YouTube検索
+      console.log('[TURBO DEBUG] Starting YouTube search');
+      searchYouTubeVideos(title, artist);
+    }
+    
+    // 動画リスト表示
+    window.showVideosList = function showVideosList() {
+      console.log('[TURBO DEBUG] showVideosList called');
+      // DOM要素を再取得（Turbo遷移対応）
+      const currentVideosList = document.getElementById('videos-list');
+      const currentPlayerArea = document.getElementById('player-area');
+      
+      console.log('[TURBO DEBUG] showVideosList elements:', {
+        videosList: !!currentVideosList,
+        playerArea: !!currentPlayerArea,
+        originalVideosList: !!videosList,
+        originalPlayerArea: !!playerArea
+      });
+      
+      if (currentVideosList && currentPlayerArea) {
+        currentVideosList.classList.remove('hidden');
+        currentPlayerArea.classList.add('hidden');
+        isMinimized = false;
+        updateMinimizeButton();
+        console.log('[TURBO DEBUG] showVideosList completed');
+      } else {
+        console.log('[TURBO DEBUG] showVideosList failed - missing elements');
+      }
+    }
+    
+    // プレイヤー表示
+    window.showPlayer = function showPlayer() {
+      console.log('[TURBO DEBUG] showPlayer called');
+      // DOM要素を再取得（Turbo遷移対応）
+      const currentVideosList = document.getElementById('videos-list');
+      const currentPlayerArea = document.getElementById('player-area');
+      
+      if (currentVideosList && currentPlayerArea) {
+        currentVideosList.classList.add('hidden');
+        currentPlayerArea.classList.remove('hidden');
+        updateMinimizeButton();
+        console.log('[TURBO DEBUG] showPlayer completed');
+      } else {
+        console.log('[TURBO DEBUG] showPlayer failed - missing elements');
+      }
+    }
+
+    // YouTube動画を検索
+    let isSearching = false;
+    function searchYouTubeVideos(title, artist) {
+      // 既に検索中の場合はスキップ
+      if (isSearching) {
+        return;
+      }
+      
+      isSearching = true;
+      const params = new URLSearchParams({
+        title: title,
+        artist: artist || ''
+      });
+      
+      const url = `/songs/youtube_search?${params}`;
+
+      fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        // DOM要素を再取得（Turbo遷移対応）
+        const currentVideosList = document.getElementById('videos-list');
+        if (!currentVideosList) {
+          console.log('[TURBO DEBUG] videosList not found in response handler');
+          return;
+        }
+        
+        if (data.error) {
+          // APIエラーの場合
+          if (data.error.includes('制限') || data.error.includes('quota')) {
+            currentVideosList.innerHTML = '<div class="text-center py-8 text-red-400 text-sm">YouTube APIの利用制限に達しました。しばらく時間をおいてから再度お試しください。</div>';
+          } else {
+            currentVideosList.innerHTML = `<div class="text-center py-8 text-red-400 text-sm">エラー: ${data.error}</div>`;
+          }
+        } else if (data.videos && data.videos.length > 0) {
+          displayVideosList(data.videos);
+        } else {
+          currentVideosList.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">関連する動画が見つかりませんでした</div>';
+        }
+        isSearching = false;
+      })
+      .catch(error => {
+        // DOM要素を再取得（Turbo遷移対応）
+        const currentVideosList = document.getElementById('videos-list');
+        if (currentVideosList) {
+          currentVideosList.innerHTML = `<div class="text-center py-8 text-red-400 text-sm">動画の検索に失敗しました: ${error.message}</div>`;
+        }
+        isSearching = false;
+      });
+    }
+
+    // 動画リストを表示（コンパクト版）
+    function displayVideosList(videos) {
+      console.log('[TURBO DEBUG] displayVideosList called');
+      // DOM要素を再取得（Turbo遷移対応）
+      const currentVideosList = document.getElementById('videos-list');
+      
+      if (!currentVideosList) {
+        console.log('[TURBO DEBUG] videosList not found in displayVideosList');
+        return;
+      }
+      
+      if (!videos || videos.length === 0) {
+        currentVideosList.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">関連する動画が見つかりませんでした</div>';
+        return;
+      }
+
+      const videosHtml = videos.map((video) => {
+        return `
+          <div class="border-b border-gray-700 last:border-b-0 p-3 hover:bg-gray-800 cursor-pointer video-item"
+               data-video-id="${video.video_id}"
+               data-video-title="${escapeHtml(video.title)}">
+            <div class="flex space-x-3">
+              <img src="${video.thumbnail_url}" alt="Thumbnail" class="w-16 h-12 object-cover rounded flex-shrink-0">
+              <div class="flex-1 min-w-0">
+                <h4 class="text-white text-sm font-medium mb-1 line-clamp-2">${escapeHtml(video.title)}</h4>
+                <p class="text-gray-400 text-xs">${escapeHtml(video.channel_title)}</p>
+              </div>
+              <div class="flex-shrink-0">
+                <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      currentVideosList.innerHTML = videosHtml;
+      setupVideoClickEvents();
+      console.log('[TURBO DEBUG] displayVideosList completed');
+    }
+
+    // 動画アイテムのクリックイベント（グローバルに一度だけ設定）
+    function setupVideoClickEvents() {
+      console.log('[TURBO DEBUG] setupVideoClickEvents called');
+      // DOM要素を再取得（Turbo遷移対応）
+      const currentVideosList = document.getElementById('videos-list');
+      
+      if (!currentVideosList) {
+        console.log('[TURBO DEBUG] videosList not found in setupVideoClickEvents');
+        return;
+      }
+      
+      // 既存のイベントリスナーを削除してから新しく追加
+      currentVideosList.removeEventListener('click', handleVideoClick);
+      currentVideosList.addEventListener('click', handleVideoClick);
+      console.log('[TURBO DEBUG] setupVideoClickEvents completed');
+    }
+    
+    function handleVideoClick(e) {
+      const videoItem = e.target.closest('.video-item');
+      if (videoItem) {
+        const videoId = videoItem.dataset.videoId;
+        const videoTitle = videoItem.dataset.videoTitle;
+        playVideoInPlayer(videoId, videoTitle);
+      }
+    }
+    
+
+    // プレイヤーで動画を再生（グローバルスコープでも利用可能にする）
+    window.playVideoInPlayer = function playVideoInPlayer(videoId, videoTitle) {
+      const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+      
+      // iframeのsrcを設定
+      youtubeIframe.src = embedUrl;
+      
+      // タイトルを更新
+      playerTitle.textContent = videoTitle;
+      
+      // プレイヤービューに切り替え
+      window.showPlayer();
+    }
+    
+    // 最小化/復元機能
+    function updateMinimizeButton() {
+      const minimizeIcon = minimizeButton.querySelector('svg path');
+      if (isMinimized) {
+        // 復元アイコン（上向き矢印）
+        minimizeIcon.setAttribute('d', 'M5 15l7-7 7 7');
+        playerContent.style.height = '0';
+        playerContent.style.overflow = 'hidden';
+      } else {
+        // 最小化アイコン（下向き矢印）
+        minimizeIcon.setAttribute('d', 'M19 9l-7 7-7-7');
+        playerContent.style.height = 'auto';
+        playerContent.style.overflow = 'visible';
+      }
+    }
+    
+    // 最小化ボタンのクリックイベント
+    minimizeButton.addEventListener('click', function() {
+      isMinimized = !isMinimized;
+      updateMinimizeButton();
+    });
+    
+    // 閉じるボタンのクリックイベント
+    closeButton.addEventListener('click', function() {
+      player.classList.add('hidden');
+      // プレイヤーをリセット
+      youtubeIframe.src = '';
+      isMinimized = false;
+      updateMinimizeButton();
+    });
+    
+    // ESCキーでプレイヤーを閉じる
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && !player.classList.contains('hidden')) {
+        closeButton.click();
+      }
+    });
+
+  }
+
+  // Turbo遷移時にフラグをリセット
+  document.addEventListener('turbo:before-visit', function() {
+    console.log('[TURBO DEBUG] turbo:before-visit fired');
+    isYouTubePlayerInitialized = false;
+    // previewClickListenerAddedはリセットしない（グローバルなイベントリスナーのため）
+  });
+
+  // YouTube フローティングプレイヤーを初期化
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('[TURBO DEBUG] DOMContentLoaded fired');
+    initYouTubeFloatingPlayer();
+  });
+  document.addEventListener('turbo:load', function() {
+    console.log('[TURBO DEBUG] turbo:load fired');
+    initYouTubeFloatingPlayer();
+  });
+
 </script>
