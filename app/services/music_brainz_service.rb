@@ -47,7 +47,7 @@ class MusicBrainzService
         fmt: "json",
         inc: "artist-rels+recording-rels"
       },
-      timeout: 1
+      timeout: 2
     })
 
     if response.success?
@@ -81,7 +81,7 @@ class MusicBrainzService
         inc: "artist-rels",
         limit: limit
       },
-      timeout: 15
+      timeout: 25
     })
 
     if response.success?
@@ -104,15 +104,18 @@ class MusicBrainzService
     url = "#{BASE_URL}/work"
 
 
+    params = {
+      query: query,
+      fmt: "json",
+      inc: "artist-rels+recording-rels",
+      limit: 10,
+      sort: "score"
+    }
+
+
     response = @client.get(url, {
-      query: {
-        query: query,
-        fmt: "json",
-        inc: "artist-rels+recording-rels",
-        limit: 10,
-        sort: "score"
-      },
-      timeout: 1
+      query: params,
+      timeout: 2
     })
 
 
@@ -142,15 +145,18 @@ class MusicBrainzService
 
 
     # Step 1: Search for recordings (without relations)
+    params = {
+      query: query,
+      fmt: "json",
+      inc: "artist-credits",
+      limit: 5,
+      sort: "score"
+    }
+
+
     response = @client.get(url, {
-      query: {
-        query: query,
-        fmt: "json",
-        inc: "artist-credits",
-        limit: 5,
-        sort: "score"
-      },
-      timeout: 1
+      query: params,
+      timeout: 2
     })
 
     if response.success?
@@ -212,7 +218,7 @@ class MusicBrainzService
   # 検索クエリを構築
   # タイトルがある場合はタイトル優先で検索
   def build_work_query(title, artist = nil)
-    if title.present? && artist.present?
+    query = if title.present? && artist.present?
       title
     elsif title.present?
       title
@@ -222,6 +228,8 @@ class MusicBrainzService
     else
       "*:*"
     end
+
+    query
   end
 
   def escape_query(text)
@@ -259,7 +267,7 @@ class MusicBrainzService
         type: work["type"],
         composers: extract_composers(work),
         lyricists: extract_lyricists(work),
-        loading_artist: artist_name.blank?
+        loading_artist: true  # 常に読み込み中として表示
       )
 
       {
@@ -271,7 +279,9 @@ class MusicBrainzService
 
     songs = sort_by_score_and_date(songs_with_metadata)
 
-    populate_artists_from_cache(songs)
+    # パフォーマンス最適化：初期表示ではアーティスト情報の取得をスキップ
+    # populate_artists_from_cache(songs) をコメントアウト
+    # アーティスト情報はフロントエンドから非同期で取得
 
     songs
   end
@@ -446,7 +456,7 @@ class MusicBrainzService
         fmt: "json",
         inc: "artist-credits"
       },
-      timeout: 1
+      timeout: 2
     })
 
 
