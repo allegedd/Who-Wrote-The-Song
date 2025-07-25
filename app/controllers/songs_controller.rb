@@ -125,16 +125,12 @@ class SongsController < ApplicationController
     # キャッシュにないもののみAPI取得
     api_results = []
     if uncached_song_ids.any?
-      # パフォーマンス最適化：少ない並列数で安定化
-      max_concurrent_threads = 3  # 大幅削減で安定性重視
+      # パフォーマンス最適化：並列数を増やして高速化
+      max_concurrent_threads = 5
       service = MusicBrainzService.new
-
-      Rails.logger.info "Loading artists for #{uncached_song_ids.size} uncached songs"
 
       # より小さなバッチで処理
       uncached_song_ids.each_slice(max_concurrent_threads) do |batch|
-        Rails.logger.info "Processing batch: #{batch}"
-        start_time = Time.now
 
         # 各バッチを並列処理
         threads = batch.map do |song_id|
@@ -174,9 +170,6 @@ class SongsController < ApplicationController
 
         api_results.concat(batch_results)
 
-        elapsed = Time.now - start_time
-        Rails.logger.info "Batch completed in #{elapsed.round(2)}s"
-
         # バッチ間の待機（APIサーバー保護）
         sleep(0.1) if uncached_song_ids.size > max_concurrent_threads
       end
@@ -190,7 +183,6 @@ class SongsController < ApplicationController
 
   def artist_works
     artist_id = params[:artist_id]
-    artist_type = params[:artist_type]
     current_song_id = params[:current_song_id]
     offset = params[:offset]&.to_i || 10  # 既に表示している10件をスキップ
 
