@@ -19,7 +19,7 @@ class SongsController < ApplicationController
       return
     end
 
-    # 作詞家・作曲家の他の作品を非同期取得（パフォーマンス改善）
+    # 作詞家・作曲家の他の作品を取得
     @composer_works = {}
     @lyricist_works = {}
 
@@ -37,12 +37,12 @@ class SongsController < ApplicationController
         other_works = Rails.cache.read(cache_key)
 
         if other_works.nil?
-          # キャッシュがない場合のみAPI呼び出し（初期表示用の20件のみ）
+          # キャッシュがない場合のみAPI呼び出し
           service = MusicBrainzService.new
-          works = service.find_artist_works_fast(composer[:mbid], 20)  # 初期表示分のみ取得
+          works = service.find_artist_works_fast(composer[:mbid], 20)
           other_works = works.reject { |work| work.id == @song.id }
 
-          # 部分的なキャッシュを保存（完全版は「もっと見る」時に取得）
+          # 部分的なキャッシュを保存
           Rails.cache.write("#{cache_key}_partial", other_works, expires_in: 1.hour)
         end
 
@@ -65,12 +65,12 @@ class SongsController < ApplicationController
         other_works = Rails.cache.read(cache_key)
 
         if other_works.nil?
-          # キャッシュがない場合のみAPI呼び出し（初期表示用の20件のみ）
+          # キャッシュがない場合のみAPI呼び出し
           service = MusicBrainzService.new
-          works = service.find_artist_works_fast(lyricist[:mbid], 20)  # 初期表示分のみ取得
+          works = service.find_artist_works_fast(lyricist[:mbid], 20)
           other_works = works.reject { |work| work.id == @song.id }
 
-          # 部分的なキャッシュを保存（完全版は「もっと見る」時に取得）
+          # 部分的なキャッシュを保存
           Rails.cache.write("#{cache_key}_partial", other_works, expires_in: 1.hour)
         end
 
@@ -98,11 +98,12 @@ class SongsController < ApplicationController
     end
   end
 
+  # 検索フォームからのリダイレクト
   def search
     redirect_to songs_path(title: params[:title], artist: params[:artist])
   end
 
-  # アーティスト情報の非同期読み込み（キャッシュ優先）
+  # アーティスト情報の非同期読み込み
   def load_artists
     song_ids = params[:song_ids]&.split(",") || []
 
@@ -122,20 +123,13 @@ class SongsController < ApplicationController
       end
     end
 
-    # キャッシュにないもののみAPI取得
     api_results = []
     if uncached_song_ids.any?
-      # パフォーマンス最適化：少ない並列数で安定化
-      max_concurrent_threads = 3  # 大幅削減で安定性重視
+      max_concurrent_threads = 5
       service = MusicBrainzService.new
-
-      Rails.logger.info "Loading artists for #{uncached_song_ids.size} uncached songs"
 
       # より小さなバッチで処理
       uncached_song_ids.each_slice(max_concurrent_threads) do |batch|
-        Rails.logger.info "Processing batch: #{batch}"
-        start_time = Time.now
-
         # 各バッチを並列処理
         threads = batch.map do |song_id|
           Thread.new do
@@ -143,7 +137,7 @@ class SongsController < ApplicationController
               song = service.find_work_by_id(song_id)
               artist_name = song&.artist || "情報なし"
 
-              # 取得結果をキャッシュ（1時間）
+              # 取得結果をキャッシュ
               Rails.cache.write("song_artist:#{song_id}", artist_name, expires_in: 1.hour)
 
               Thread.current[:result] = {
@@ -160,7 +154,7 @@ class SongsController < ApplicationController
           end
         end
 
-        # バッチの結果を収集（タイムアウト付き）
+        # バッチの結果を収集
         batch_results = threads.map do |thread|
           # 最大5秒でタイムアウト
           if thread.join(5)
@@ -174,15 +168,11 @@ class SongsController < ApplicationController
 
         api_results.concat(batch_results)
 
-        elapsed = Time.now - start_time
-        Rails.logger.info "Batch completed in #{elapsed.round(2)}s"
-
-        # バッチ間の待機（APIサーバー保護）
+        # バッチ間の待機
         sleep(0.1) if uncached_song_ids.size > max_concurrent_threads
       end
     end
 
-    # キャッシュ結果とAPI結果をマージ
     all_results = cached_results + api_results
 
     render json: { artists: all_results }
@@ -190,11 +180,10 @@ class SongsController < ApplicationController
 
   def artist_works
     artist_id = params[:artist_id]
-    artist_type = params[:artist_type]
     current_song_id = params[:current_song_id]
-    offset = params[:offset]&.to_i || 10  # 既に表示している10件をスキップ
+    offset = params[:offset]&.to_i || 10
 
-    # キャッシュから作品を取得（なければAPI呼び出し）
+    # キャッシュから作品を取得
     other_works = Rails.cache.read("artist_works:#{artist_id}")
 
     if other_works.nil?
@@ -205,12 +194,12 @@ class SongsController < ApplicationController
       # 新しいキャッシュを保存
       Rails.cache.write("artist_works:#{artist_id}", other_works, expires_in: 1.hour)
     else
-      # キャッシュされたデータから現在の楽曲を除外（念のため）
+      # キャッシュされたデータから現在の楽曲を除外
       other_works = other_works.reject { |work| work.id == current_song_id }
     end
 
-    # 10件ずつ表示（API負荷軽減）
-    limit = 10  # API負荷軽減とUX改善のため削減
+    # 10件ずつ表示
+    limit = 10
     works_to_show = other_works[offset, limit] || []
     has_more = other_works.size > (offset + limit)
 
@@ -226,7 +215,6 @@ class SongsController < ApplicationController
   end
 
   # YouTube動画検索エンドポイント
-  # 楽曲のプレビュー用に関連動画を検索
   def youtube_search
     title = params[:title]
     artist = params[:artist]
@@ -243,21 +231,12 @@ class SongsController < ApplicationController
   private
 
   def search_songs(title, artist = nil)
-    # シンプルなAPI実装（高速かつ正確）
-    service = MusicBrainzService.new
-    service.search_works(title, artist)
+    MusicBrainzService.new.search_works(title, artist)
   end
 
   def find_song_by_id(id)
-    # シンプルなAPI実装
     service = MusicBrainzService.new
-    song = service.find_work_by_id(id)
-
-    # Work IDで見つからない場合、Recording IDとして試す
-    if song.nil?
-      song = service.find_recording_by_id(id)
-    end
-
-    song
+    # Work IDで検索、見つからなければRecording IDで検索
+    service.find_work_by_id(id) || service.find_recording_by_id(id)
   end
 end
