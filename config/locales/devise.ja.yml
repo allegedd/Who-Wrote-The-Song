@@ -36,7 +36,7 @@ ja:
       updated_not_active: "パスワードが正常に変更されました。"
     registrations:
       destroyed: "さようなら！アカウントは正常に削除されました。またのご利用をお待ちしております。"
-      signed_up: "ようこそ！アカウント登録が正常に完了しました。"
+      signed_up: "アカウント登録しました"
       signed_up_but_inactive: "アカウント登録は完了しましたが、アカウントがまだ有効化されていないため、ログインできませんでした。"
       signed_up_but_locked: "アカウント登録は完了しましたが、アカウントがロックされているため、ログインできませんでした。"
       signed_up_but_unconfirmed: "確認リンクを記載したメッセージを送信しました。リンクを開いてアカウントを有効化してください。"
@@ -44,9 +44,9 @@ ja:
       updated: "アカウントが正常に更新されました。"
       updated_but_not_signed_in: "アカウントは正常に更新されましたが、パスワードが変更されたため、再度ログインが必要です。"
     sessions:
-      signed_in: "ログインしました。"
-      signed_out: "ログアウトしました。"
-      already_signed_out: "ログアウトしました。"
+      signed_in: "ログインしました"
+      signed_out: "ログアウトしました"
+      already_signed_out: "ログアウトしました"
     unlocks:
       send_instructions: "アカウントの凍結解除手順を数分以内にメールでお送りします。"
       send_paranoid_instructions: "アカウントが存在する場合、凍結解除手順を数分以内にメールでお送りします。"

@@ -14,43 +14,50 @@
       <% end %>
     </div>
 
-    <% if @songs.present? %>
-      <div class="grid gap-4">
-        <% @songs.each do |song| %>
-          <div class="bg-gray-900 rounded-lg p-6 border border-gray-800 hover:border-gray-700 transition-colors">
-            <%= link_to song_path(song.id), class: "block" do %>
+    <!-- 検索結果コンテナ -->
+    <div id="search-results-container">
+      <% if @songs.present? %>
+        <div class="grid gap-4" id="songs-grid">
+          <% @songs.each_with_index do |song, index| %>
+            <div class="bg-gray-900 rounded-lg p-6 border border-gray-800 hover:border-gray-700 transition-colors song-item" 
+                 style="animation-delay: <%= index * 50 %>ms">
               <div class="flex justify-between items-start">
-                <div>
-                  <h2 class="text-xl font-semibold text-gray-100 mb-2">
-                    <%= song.title %>
-                  </h2>
-                  <p class="text-gray-400 mb-2" data-artist-info="<%= song.id %>">
-                    アーティスト: <span class="text-gray-300 artist-name">
-                      <%= song.artist.present? ? song.artist : "読み込み中..." %>
-                    </span>
-                    <% if song.loading_artist || song.artist.blank? %>
-                      <span class="artist-loading text-gray-500 text-sm ml-2">🔄</span>
+                <%= link_to song_path(song.id), class: "block flex-1" do %>
+                  <div>
+                    <h2 class="text-xl font-semibold text-gray-100 mb-2">
+                      <%= song.title %>
+                    </h2>
+                    <p class="text-gray-400 mb-2" data-artist-info="<%= song.id %>">
+                      アーティスト: <span class="text-gray-300 artist-name">
+                        <%= song.artist.present? ? song.artist : "読み込み中..." %>
+                      </span>
+                      <% if song.loading_artist || song.artist.blank? %>
+                        <span class="artist-loading text-gray-500 text-sm ml-2">🔄</span>
+                      <% end %>
+                    </p>
+                    <% if song.creator_names.present? %>
+                      <p class="text-sm text-gray-400 mt-2">
+                        <%= song.creator_names %>
+                      </p>
+                    <% else %>
+                      <p class="text-sm text-gray-500 mt-2">
+                        ※作詞作曲情報なし
+                      </p>
                     <% end %>
-                  </p>
-                  <% if song.creator_names.present? %>
-                    <p class="text-sm text-gray-400 mt-2">
-                      <%= song.creator_names %>
-                    </p>
-                  <% else %>
-                    <p class="text-sm text-gray-500 mt-2">
-                      ※作詞作曲情報なし
-                    </p>
+                  </div>
+                <% end %>
+                
+                <div class="flex items-center ml-4">
+                  <%= link_to song_path(song.id), class: "text-green-500 hover:text-green-400" do %>
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
                   <% end %>
                 </div>
-                <div class="text-green-500">
-                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                  </svg>
-                </div>
               </div>
-            <% end %>
-          </div>
-        <% end %>
+            </div>
+          <% end %>
+        </div>
         
         <!-- 検索結果が上限に達している場合の誘導 -->
         <% if @songs.present? && @songs.size >= 10 && params[:artist].blank? %>
@@ -68,29 +75,67 @@
                 絞り込み検索
               </button>
             </form>
-            <p class="text-xs text-gray-500 mt-2">
-              💡 部分的なアーティスト名でも検索できます（例: 「結束バンド」→「結束」）
-            </p>
           </div>
         <% end %>
-      </div>
-    <% else %>
-      <div class="bg-gray-900 rounded-lg p-8 text-center border border-gray-800">
-        <p class="text-gray-400 mb-4">
-          <% if params[:title].present? %>
-            該当する楽曲が見つかりませんでした。
-          <% else %>
-            検索条件を入力してください。
-          <% end %>
-        </p>
-        <%= link_to "検索画面に戻る", root_path, class: "text-green-500 hover:text-green-400 font-medium" %>
-      </div>
-    <% end %>
+      <% else %>
+        <div class="bg-gray-900 rounded-lg p-8 text-center border border-gray-800">
+          <p class="text-gray-400 mb-4">
+            <% if params[:title].present? %>
+              該当する楽曲が見つかりませんでした。
+            <% else %>
+              検索条件を入力してください。
+            <% end %>
+          </p>
+          <%= link_to "検索画面に戻る", root_path, class: "text-green-500 hover:text-green-400 font-medium" %>
+        </div>
+      <% end %>
+    </div>
   </div>
 </div>
 
+<style>
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .song-item {
+    opacity: 0;
+    animation: fadeInUp 0.4s ease-out forwards;
+  }
+  
+  /* アーティスト情報の読み込み中アニメーション */
+  .artist-loading {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  /* アーティスト情報更新時のアニメーション */
+  .artist-name-updated {
+    animation: highlightUpdate 1s ease-out;
+  }
+  
+  @keyframes highlightUpdate {
+    0% { background-color: rgba(34, 197, 94, 0.2); }
+    100% { background-color: transparent; }
+  }
+</style>
+
 <script>
+  console.log('=== Script Start ===');
   console.log('Script loaded in search results page');
+  console.log('Document ready state:', document.readyState);
+  console.log('===================');
   
   // アーティスト情報の非同期読み込み
   function loadArtistsOnSearchPage() {
@@ -130,6 +175,11 @@
             
             if (nameSpan) {
               nameSpan.textContent = artist.artist;
+              // アニメーションを追加
+              nameSpan.classList.add('artist-name-updated');
+              setTimeout(() => {
+                nameSpan.classList.remove('artist-name-updated');
+              }, 1000);
             }
             if (loadingSpan) {
               loadingSpan.remove();
@@ -148,7 +198,7 @@
         });
       });
       }
-    }, 200); // 0.2秒待機に短縮
+    }, 50); // 0.05秒に短縮して高速化
   }
   
   // Turbo対応のイベントリスナー

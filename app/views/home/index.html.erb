@@ -12,7 +12,7 @@
     
     <div class="max-w-2xl mx-auto">
       <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border border-gray-800">
-        <%= form_with url: search_songs_path, method: :get, local: true, class: "space-y-4" do |f| %>
+        <%= form_with url: search_songs_path, method: :get, local: true, class: "space-y-4", id: "search-form" do |f| %>
           <div>
             <%= f.label :title, "曲名を入力", class: "block text-gray-300 text-sm font-medium mb-2" %>
             <%= f.text_field :title, placeholder: "例: Lemon", class: "w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500 transition-colors text-gray-100 placeholder-gray-500", required: true %>
@@ -21,7 +21,7 @@
             <%= f.label :artist, "アーティスト名（任意）", class: "block text-gray-300 text-sm font-medium mb-2" %>
             <%= f.text_field :artist, placeholder: "例: 米津玄師", class: "w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500 transition-colors text-gray-100 placeholder-gray-500" %>
           </div>
-          <%= f.submit "検索する", class: "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] cursor-pointer" %>
+          <%= f.submit "検索する", class: "w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] cursor-pointer", id: "search-submit" %>
         <% end %>
       </div>
     </div>
@@ -59,3 +59,29 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('search-form');
+    const submitButton = document.getElementById('search-submit');
+    
+    form.addEventListener('submit', function(e) {
+      // ボタンのテキストを変更
+      submitButton.value = '検索中...';
+      submitButton.disabled = true;
+      submitButton.classList.add('opacity-75');
+      
+      // スピナーアニメーションを追加
+      submitButton.style.position = 'relative';
+      submitButton.innerHTML = `
+        <span class="flex items-center justify-center">
+          <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          検索中...
+        </span>
+      `;
+    });
+  });
+</script>
