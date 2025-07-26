@@ -3,25 +3,15 @@
     <% if @song.present? %>
       <!-- 楽曲基本情報 -->
       <div class="bg-gray-900 rounded-lg p-6 mb-8 border border-gray-800">
-        <div class="flex justify-between items-start">
-          <div class="flex-1">
-            <h1 class="text-3xl font-bold text-gray-100 mb-4">
-              <%= @song.title %>
-            </h1>
-            <% if @song.artist.present? %>
-              <p class="text-lg text-gray-300">
-                アーティスト: <span class="text-gray-100 font-medium"><%= @song.artist %></span>
-              </p>
-            <% end %>
-          </div>
-          <button class="preview-btn ml-4 p-3 bg-gray-700 hover:bg-gray-600 text-white rounded-full transition-colors"
-                  data-title="<%= @song.title %>"
-                  data-artist="<%= @song.artist %>"
-                  title="再生">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z"/>
-            </svg>
-          </button>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-100 mb-4">
+            <%= @song.title %>
+          </h1>
+          <% if @song.artist.present? %>
+            <p class="text-lg text-gray-300">
+              アーティスト: <span class="text-gray-100 font-medium"><%= @song.artist %></span>
+            </p>
+          <% end %>
         </div>
       </div>
 
@@ -182,11 +172,14 @@
     <div class="mt-8 text-center">
       <%= link_to "検索画面に戻る", root_path, class: "text-green-500 hover:text-green-400 font-medium" %>
     </div>
+    
+    <!-- プレイヤーバー分の余白 -->
+    <div class="h-24"></div>
   </div>
 </div>
 
 <!-- YouTube フローティングプレイヤー -->
-<div id="youtube-floating-player" class="fixed bottom-4 right-4 w-96 bg-gray-900 rounded-lg shadow-2xl border border-gray-700 z-50 hidden">
+<div id="youtube-floating-player" class="fixed bottom-20 right-4 w-96 bg-gray-900 rounded-lg shadow-2xl border border-gray-700 z-50 hidden">
   <!-- ヘッダー -->
   <div class="flex items-center justify-between p-3 border-b border-gray-700">
     <div class="flex items-center space-x-2 min-w-0 flex-1">
@@ -211,28 +204,545 @@
 
   <!-- コンテンツエリア -->
   <div id="player-content" class="transition-all duration-300">
-    <!-- 検索結果リスト -->
+    <!-- 検索結果リスト（常に表示） -->
     <div id="videos-list" class="max-h-64 overflow-y-auto">
       <div id="loading-spinner" class="text-center py-8">
         <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div>
         <p class="text-gray-400 mt-2 text-sm">動画を検索中...</p>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- プレイヤーエリア -->
-    <div id="player-area" class="hidden">
-      <div class="aspect-video bg-black">
-        <iframe id="youtube-iframe" width="100%" height="100%" frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen>
-        </iframe>
+<!-- Spotifyスタイルプレイヤーバー -->
+<div id="spotify-player-bar" class="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-700 z-40 hidden">
+  <div class="flex items-center justify-between px-4 py-3">
+    <!-- 左側: 楽曲情報 -->
+    <div class="flex items-center space-x-3 w-1/4 min-w-0">
+      <div class="w-12 h-12 bg-gray-800 rounded flex-shrink-0">
+        <img id="player-bar-thumbnail" src="" alt="" class="w-full h-full object-cover rounded hidden">
+        <div id="player-bar-thumbnail-placeholder" class="w-full h-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div id="player-bar-title" class="text-white text-sm font-medium truncate">楽曲を選択してください</div>
+        <div id="player-bar-artist" class="text-gray-400 text-xs truncate">アーティスト</div>
+      </div>
+    </div>
+
+    <!-- 中央: 再生コントロール -->
+    <div class="flex-1 max-w-2xl px-8">
+      <!-- コントロールボタン -->
+      <div class="flex items-center justify-center space-x-4 mb-2">
+        <button id="prev-btn" class="text-gray-400 hover:text-white transition-colors p-2" disabled>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+          </svg>
+        </button>
+        
+        <button id="play-pause-btn" class="bg-white text-black rounded-full p-3 hover:scale-105 transition-transform">
+          <svg id="play-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg id="pause-icon" class="w-5 h-5 hidden" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+          </svg>
+        </button>
+        
+        <button id="next-btn" class="text-gray-400 hover:text-white transition-colors p-2" disabled>
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- プログレスバー -->
+      <div class="flex items-center space-x-2">
+        <span id="current-time" class="text-xs text-gray-400 w-10 text-right">0:00</span>
+        <div class="flex-1 bg-gray-600 rounded-full h-1 relative group">
+          <div id="progress-bar" class="bg-white h-1 rounded-full transition-all duration-100" style="width: 0%"></div>
+          <input id="progress-slider" type="range" min="0" max="100" value="0" 
+                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        </div>
+        <span id="total-time" class="text-xs text-gray-400 w-10">0:00</span>
+      </div>
+    </div>
+
+    <!-- 右側: 音量とプレイリスト -->
+    <div class="flex items-center space-x-4 w-1/4 justify-end">
+      <button id="playlist-btn" class="text-gray-400 hover:text-white transition-colors p-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+        </svg>
+      </button>
+      
+      <div class="flex items-center space-x-2">
+        <button id="volume-btn" class="text-gray-400 hover:text-white transition-colors">
+          <svg id="volume-icon" class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+          </svg>
+        </button>
+        <div class="w-20 bg-gray-600 rounded-full h-1 relative">
+          <div id="volume-bar" class="bg-white h-1 rounded-full" style="width: 70%"></div>
+          <input id="volume-slider" type="range" min="0" max="100" value="70" 
+                 class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        </div>
       </div>
     </div>
   </div>
 </div>
 
+<!-- YouTube Player (隠しiframe) -->
+<div id="youtube-player-container" class="fixed -top-96 left-0 w-96 h-64 opacity-0 pointer-events-none">
+  <div id="youtube-player"></div>
+</div>
+
+<!-- YouTube Player API -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
   console.log('Script loaded successfully');
+  
+  // YouTube Player API の設定
+  let youtubePlayer = null; // メインプレイヤー（プレイヤーバー用、音声のみ）
+  let isPlayerReady = false;
+  let currentPlaylist = [];
+  let currentIndex = 0;
+  let isPlaying = false;
+  let updateTimer = null;
+  let currentSongTitle = '';
+  let currentSongArtist = '';
+  let workItemsList = []; // ページ上のwork_itemのリスト
+  let currentWorkIndex = 0; // 現在再生中のwork_itemのインデックス
+  let currentPlayingButton = null; // 現在再生中のボタン
+  let pendingPlayButton = null;  // 検索中で再生待ちのボタン
+  
+  // YouTube Player API のコールバック
+  window.onYouTubeIframeAPIReady = function() {
+    console.log('YouTube Player API loaded');
+    initializeSpotifyPlayer();
+  };
+  
+  // Turbo遷移後にYouTube Player APIが既に読み込まれている場合の処理
+  function checkAndInitializePlayer() {
+    if (window.YT && window.YT.Player && !youtubePlayer) {
+      console.log('YouTube Player API already loaded, initializing player');
+      initializeSpotifyPlayer();
+    }
+  }
+  
+  // 再生ボタンを再生中状態に変更（グローバル関数）
+  function setButtonToPlaying(button) {
+    if (currentPlayingButton && currentPlayingButton !== button) {
+      resetButtonToIdle(currentPlayingButton);
+    }
+    
+    currentPlayingButton = button;
+    button.classList.add('playing');
+    button.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+    button.classList.add('bg-red-600', 'hover:bg-red-700');
+    
+    const svg = button.querySelector('svg');
+    if (svg) {
+      svg.innerHTML = '<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>'; // 一時停止アイコン
+    }
+  }
+
+  // 再生ボタンを待機状態に戻す（グローバル関数）
+  function resetButtonToIdle(button) {
+    if (!button) return;
+    
+    button.classList.remove('playing');
+    button.classList.remove('bg-red-600', 'hover:bg-red-700');
+    button.classList.add('bg-gray-700', 'hover:bg-gray-600');
+    
+    const svg = button.querySelector('svg');
+    if (svg) {
+      svg.innerHTML = '<path d="M8 5v14l11-7z"/>'; // 再生アイコン
+    }
+  }
+  
+  function initializeSpotifyPlayer() {
+    // 既存のプレイヤーがある場合は破棄
+    if (youtubePlayer && youtubePlayer.destroy) {
+      try {
+        youtubePlayer.destroy();
+      } catch (e) {
+        console.log('Error destroying player:', e);
+      }
+    }
+    
+    // メインプレイヤーコンテナが存在するか確認
+    const playerContainer = document.getElementById('youtube-player');
+    if (!playerContainer) {
+      console.error('YouTube player container not found');
+      return;
+    }
+    
+    // メインプレイヤー（音声のみ、非表示）を初期化
+    youtubePlayer = new YT.Player('youtube-player', {
+      height: '240',
+      width: '384', 
+      playerVars: {
+        autoplay: 0,
+        controls: 0,
+        disablekb: 1,
+        fs: 0,
+        iv_load_policy: 3,
+        modestbranding: 1,
+        rel: 0,
+        showinfo: 0
+      },
+      events: {
+        onReady: onPlayerReady,
+        onStateChange: onPlayerStateChange
+      }
+    });
+  }
+  
+  // プレイヤーの準備完了
+  function onPlayerReady(event) {
+    console.log('YouTube Player ready');
+    isPlayerReady = true;
+    setupPlayerControls();
+    collectWorkItems(); // work_itemのリストを収集
+  }
+  
+  // プレイヤーの状態変更
+  function onPlayerStateChange(event) {
+    console.log('Player state changed:', event.data);
+    
+    if (event.data === YT.PlayerState.PLAYING) {
+      isPlaying = true;
+      updatePlayPauseButton();
+      updateWorkItemButtonStates();
+      startProgressUpdater();
+      updateCurrentTrackUI();
+      
+      // フローティングウインドウのサムネイル表示を更新
+      updateFloatingThumbnail();
+    } else if (event.data === YT.PlayerState.PAUSED) {
+      isPlaying = false;
+      updatePlayPauseButton();
+      updateWorkItemButtonStates();
+      stopProgressUpdater();
+    } else if (event.data === YT.PlayerState.ENDED) {
+      isPlaying = false;
+      updatePlayPauseButton();
+      updateWorkItemButtonStates();
+      stopProgressUpdater();
+      playNext(); // 自動的に次の曲へ
+    }
+  }
+  
+  // フローティングウインドウのサムネイル表示を更新
+  function updateFloatingThumbnail() {
+    if (!isPlayerReady || !youtubePlayer) {
+      return;
+    }
+    
+    try {
+      const currentVideoUrl = youtubePlayer.getVideoUrl();
+      const currentVideoId = currentVideoUrl.split('v=')[1]?.split('&')[0];
+      
+      if (currentVideoId && currentPlaylist.length > 0) {
+        const currentVideo = currentPlaylist.find(video => video.video_id === currentVideoId);
+        if (currentVideo && currentVideo.thumbnail_url) {
+          const thumbnailImg = document.getElementById('current-video-thumbnail');
+          const placeholder = document.getElementById('thumbnail-placeholder');
+          
+          if (thumbnailImg && placeholder) {
+            thumbnailImg.src = currentVideo.thumbnail_url;
+            thumbnailImg.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Thumbnail update error:', e);
+    }
+  }
+  
+  // ページ上のwork_itemを収集
+  function collectWorkItems() {
+    const workItems = document.querySelectorAll('.work-item .preview-btn');
+    workItemsList = Array.from(workItems).map(btn => ({
+      title: btn.dataset.title,
+      artist: btn.dataset.artist,
+      button: btn
+    }));
+    console.log('Collected work items:', workItemsList.length);
+    updatePlayerNavButtons();
+  }
+  
+  // プレイヤーのナビゲーションボタンを更新
+  function updatePlayerNavButtons() {
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    
+    if (prevBtn && nextBtn) {
+      const hasMultipleItems = workItemsList.length > 1;
+      prevBtn.disabled = !hasMultipleItems;
+      nextBtn.disabled = !hasMultipleItems;
+      
+      if (hasMultipleItems) {
+        prevBtn.classList.remove('text-gray-600');
+        nextBtn.classList.remove('text-gray-600');
+        prevBtn.classList.add('text-gray-400');
+        nextBtn.classList.add('text-gray-400');
+      } else {
+        prevBtn.classList.add('text-gray-600');
+        nextBtn.classList.add('text-gray-600');
+      }
+    }
+  }
+  
+  // プレイヤーコントロールの初期化
+  function setupPlayerControls() {
+    const playPauseBtn = document.getElementById('play-pause-btn');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const progressSlider = document.getElementById('progress-slider');
+    const volumeSlider = document.getElementById('volume-slider');
+    const playlistBtn = document.getElementById('playlist-btn');
+    
+    playPauseBtn.addEventListener('click', togglePlayPause);
+    prevBtn.addEventListener('click', playPrevious);
+    nextBtn.addEventListener('click', playNext);
+    progressSlider.addEventListener('input', seekTo);
+    volumeSlider.addEventListener('input', setVolume);
+    playlistBtn.addEventListener('click', toggleFloatingPlayer);
+    
+    console.log('Player controls initialized');
+  }
+  
+  // 再生/停止の切り替え
+  function togglePlayPause() {
+    if (!isPlayerReady || !youtubePlayer) return;
+    
+    if (isPlaying) {
+      youtubePlayer.pauseVideo();
+    } else {
+      if (currentPlaylist.length > 0) {
+        youtubePlayer.playVideo();
+      }
+    }
+    // 状態更新はonPlayerStateChangeで自動的に行われる
+  }
+  
+  // 前の曲（work_itemベース）
+  function playPrevious() {
+    if (workItemsList.length === 0) return;
+    
+    // 1番目の曲の場合はそのまま1番目を再生
+    if (currentWorkIndex === 0) {
+      console.log('Already at first work, replaying:', workItemsList[0].title);
+      const firstWork = workItemsList[0];
+      openFloatingPlayer(firstWork.title, firstWork.artist, firstWork.button);
+    } else {
+      // 前のwork_itemに移動
+      currentWorkIndex = currentWorkIndex - 1;
+      const prevWork = workItemsList[currentWorkIndex];
+      
+      console.log('Playing previous work:', prevWork.title);
+      
+      // 新しい楽曲を検索して再生
+      openFloatingPlayer(prevWork.title, prevWork.artist, prevWork.button);
+    }
+  }
+  
+  // 次の曲（work_itemベース）
+  function playNext() {
+    if (workItemsList.length === 0) return;
+    
+    // 最後の曲の場合はそのまま最後を再生
+    if (currentWorkIndex === workItemsList.length - 1) {
+      console.log('Already at last work, replaying:', workItemsList[currentWorkIndex].title);
+      const lastWork = workItemsList[currentWorkIndex];
+      openFloatingPlayer(lastWork.title, lastWork.artist, lastWork.button);
+    } else {
+      // 次のwork_itemに移動
+      currentWorkIndex = currentWorkIndex + 1;
+      const nextWork = workItemsList[currentWorkIndex];
+      
+      console.log('Playing next work:', nextWork.title);
+      
+      // 新しい楽曲を検索して再生
+      openFloatingPlayer(nextWork.title, nextWork.artist, nextWork.button);
+    }
+  }
+  
+  // 指定時間にシーク
+  function seekTo(event) {
+    if (!isPlayerReady || !youtubePlayer) return;
+    
+    const duration = youtubePlayer.getDuration();
+    const seekTime = (event.target.value / 100) * duration;
+    youtubePlayer.seekTo(seekTime);
+  }
+  
+  // 音量設定
+  function setVolume(event) {
+    if (!isPlayerReady || !youtubePlayer) return;
+    
+    const volume = event.target.value;
+    youtubePlayer.setVolume(volume);
+    updateVolumeBar(volume);
+  }
+  
+  // 楽曲を読み込んで再生
+  function loadAndPlayTrack(track) {
+    if (!isPlayerReady || !youtubePlayer || !track) return;
+    
+    youtubePlayer.loadVideoById(track.video_id);
+    updateTrackInfo(track);
+    showSpotifyPlayerBar();
+    
+    // 楽曲が変更されたので、work_itemボタンの状態を更新
+    updateWorkItemButtonStates();
+  }
+  
+  // トラック情報の更新
+  function updateTrackInfo(track) {
+    document.getElementById('player-bar-title').textContent = track.title;
+    document.getElementById('player-bar-artist').textContent = track.channel_title;
+    
+    const thumbnail = document.getElementById('player-bar-thumbnail');
+    const placeholder = document.getElementById('player-bar-thumbnail-placeholder');
+    
+    if (track.thumbnail_url) {
+      thumbnail.src = track.thumbnail_url;
+      thumbnail.classList.remove('hidden');
+      placeholder.classList.add('hidden');
+    } else {
+      thumbnail.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+    }
+  }
+  
+  // 再生/停止ボタンの表示更新
+  function updatePlayPauseButton() {
+    const playIcon = document.getElementById('play-icon');
+    const pauseIcon = document.getElementById('pause-icon');
+    
+    if (isPlaying) {
+      playIcon.classList.add('hidden');
+      pauseIcon.classList.remove('hidden');
+    } else {
+      playIcon.classList.remove('hidden');
+      pauseIcon.classList.add('hidden');
+    }
+  }
+  
+  // work_itemの再生ボタン状態を更新
+  function updateWorkItemButtonStates() {
+    console.log('[BUTTON SYNC] Updating work item button states:', { 
+      isPlaying, 
+      currentWorkIndex, 
+      workItemsCount: workItemsList.length 
+    });
+    
+    // 全てのwork_itemの再生ボタンを待機状態にリセット
+    const allPreviewButtons = document.querySelectorAll('.preview-btn');
+    console.log('[BUTTON SYNC] Found preview buttons:', allPreviewButtons.length);
+    
+    allPreviewButtons.forEach(btn => {
+      resetButtonToIdle(btn);
+    });
+    
+    // 現在再生中のwork_itemのボタンのみ再生中状態に設定
+    if (isPlaying && workItemsList.length > 0 && currentWorkIndex < workItemsList.length) {
+      const currentWorkButton = workItemsList[currentWorkIndex].button;
+      console.log('[BUTTON SYNC] Setting current work button to playing:', currentWorkButton);
+      if (currentWorkButton) {
+        setButtonToPlaying(currentWorkButton);
+      }
+    }
+  }
+  
+  // プログレスバーの更新開始
+  function startProgressUpdater() {
+    stopProgressUpdater();
+    updateTimer = setInterval(updateProgress, 1000);
+  }
+  
+  // プログレスバーの更新停止
+  function stopProgressUpdater() {
+    if (updateTimer) {
+      clearInterval(updateTimer);
+      updateTimer = null;
+    }
+  }
+  
+  // プログレス表示の更新
+  function updateProgress() {
+    if (!isPlayerReady || !youtubePlayer) return;
+    
+    try {
+      const currentTime = youtubePlayer.getCurrentTime();
+      const duration = youtubePlayer.getDuration();
+      
+      if (duration > 0) {
+        const progress = (currentTime / duration) * 100;
+        document.getElementById('progress-bar').style.width = progress + '%';
+        document.getElementById('progress-slider').value = progress;
+        
+        document.getElementById('current-time').textContent = formatTime(currentTime);
+        document.getElementById('total-time').textContent = formatTime(duration);
+      }
+    } catch (e) {
+      console.log('Progress update error:', e);
+    }
+  }
+  
+  // 現在のトラックUIの更新（YouTube動画プレイリストではなくwork_itemリストを使用）
+  function updateCurrentTrackUI() {
+    // work_itemリストの更新で対応するため、この関数は空にする
+    // updatePlayerNavButtons()が代わりに使用される
+  }
+  
+  // 音量バーの更新
+  function updateVolumeBar(volume) {
+    document.getElementById('volume-bar').style.width = volume + '%';
+  }
+  
+  // 時間のフォーマット
+  function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+  }
+  
+  // Spotifyプレイヤーバーを表示
+  function showSpotifyPlayerBar() {
+    document.getElementById('spotify-player-bar').classList.remove('hidden');
+  }
+  
+  // Spotifyプレイヤーバーを非表示
+  function hideSpotifyPlayerBar() {
+    document.getElementById('spotify-player-bar').classList.add('hidden');
+    if (youtubePlayer && isPlayerReady) {
+      youtubePlayer.stopVideo();
+    }
+    currentPlaylist = [];
+    currentIndex = 0;
+    isPlaying = false;
+    stopProgressUpdater();
+    
+    // 全てのwork_itemボタンを待機状態にリセット
+    updateWorkItemButtonStates();
+  }
+  
+  // フローティングプレイヤーの表示/非表示を切り替え
+  function toggleFloatingPlayer() {
+    const floatingPlayer = document.getElementById('youtube-floating-player');
+    if (floatingPlayer) {
+      floatingPlayer.classList.toggle('hidden');
+    }
+  }
   
   function loadInitialWorks(button) {
     const artistId = button.dataset.artistId;
@@ -341,6 +851,11 @@
       if (loadingSpan) {
         loadingSpan.classList.add('hidden');
       }
+      
+      // work_itemリストを再収集
+      setTimeout(() => {
+        collectWorkItems();
+      }, 100);
       
       // 全て表示したらボタンを非表示
       if (!data.has_more) {
@@ -665,15 +1180,31 @@
           }
           
           console.log('[TURBO DEBUG] Calling openFloatingPlayer');
-          openFloatingPlayer(title, artist);
+          openFloatingPlayer(title, artist, previewBtn);
         }
       });
       console.log('[TURBO DEBUG] Click listener added');
     }
 
-    // フローティングプレイヤーを開く
-    function openFloatingPlayer(title, artist) {
+    // フローティングプレイヤーを開く（グローバルスコープに公開）
+    window.openFloatingPlayer = function openFloatingPlayer(title, artist, clickedButton = null) {
       console.log('[TURBO DEBUG] openFloatingPlayer called with:', { title, artist });
+      
+      // Spotifyプレイヤーバー用の楽曲情報を設定
+      currentSongTitle = title;
+      currentSongArtist = artist;
+      
+      // クリックされたボタンを記憶
+      pendingPlayButton = clickedButton;
+      
+      // 現在のwork_itemのインデックスを更新
+      if (clickedButton) {
+        const index = workItemsList.findIndex(item => item.button === clickedButton);
+        if (index !== -1) {
+          currentWorkIndex = index;
+          console.log('Updated currentWorkIndex to:', currentWorkIndex);
+        }
+      }
       
       // DOM要素を再取得（Turbo遷移で変わる可能性があるため）
       const currentPlayer = document.getElementById('youtube-floating-player');
@@ -705,9 +1236,106 @@
       currentVideosList.innerHTML = '<div id="loading-spinner" class="text-center py-8"><div class="animate-spin rounded-full h-6 w-6 border-b-2 border-red-500 mx-auto"></div><p class="text-gray-400 mt-2 text-sm">動画を検索中...</p></div>';
       console.log('[TURBO DEBUG] Loading spinner set');
 
-      // YouTube検索
+      // YouTube検索（結果をプレイリストに設定し、1曲目を自動再生）
       console.log('[TURBO DEBUG] Starting YouTube search');
-      searchYouTubeVideos(title, artist);
+      searchYouTubeVideosForSpotifyPlayer(title, artist);
+    }
+    
+    // Spotifyプレイヤー用のYouTube検索
+    function searchYouTubeVideosForSpotifyPlayer(title, artist) {
+      console.log('[SPOTIFY PLAYER] Starting YouTube search for:', { title, artist });
+      
+      if (isSearching) {
+        console.log('[SPOTIFY PLAYER] Search already in progress');
+        return;
+      }
+      
+      isSearching = true;
+      
+      fetch(`/songs/youtube_search?title=${encodeURIComponent(title)}&artist=${encodeURIComponent(artist)}`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        console.log('[SPOTIFY PLAYER] Search results:', data);
+        
+        if (data.error) {
+          console.error('[SPOTIFY PLAYER] Search error:', data.error);
+          handleSpotifyPlayerError(data.error);
+        } else if (data.videos && data.videos.length > 0) {
+          setupSpotifyPlayerPlaylist(data.videos, title, artist);
+        } else {
+          console.log('[SPOTIFY PLAYER] No videos found');
+          handleSpotifyPlayerError('関連する動画が見つかりませんでした');
+        }
+        
+        // フローティングプレイヤーにも結果を表示
+        updateFloatingPlayerResults(data);
+        isSearching = false;
+      })
+      .catch(error => {
+        console.error('[SPOTIFY PLAYER] Search failed:', error);
+        handleSpotifyPlayerError(`動画の検索に失敗しました: ${error.message}`);
+        isSearching = false;
+      });
+    }
+    
+    // Spotifyプレイヤーのプレイリストをセットアップし、1曲目を自動再生
+    function setupSpotifyPlayerPlaylist(videos, title, artist) {
+      console.log('[SPOTIFY PLAYER] Setting up playlist with', videos.length, 'videos');
+      
+      // プレイリストを設定
+      currentPlaylist = videos.map(video => ({
+        ...video,
+        original_title: title,
+        original_artist: artist
+      }));
+      currentIndex = 0;
+      
+      // フローティングプレイヤーの動画リストも更新
+      displayVideosList(videos);
+      
+      // Spotifyプレイヤーが利用可能で1曲目がある場合、自動再生
+      if (isPlayerReady && youtubePlayer && videos.length > 0) {
+        console.log('[SPOTIFY PLAYER] Auto-playing first track:', videos[0].title);
+        loadAndPlayTrack(currentPlaylist[0]);
+      }
+    }
+    
+    // Spotifyプレイヤーのエラーハンドリング
+    function handleSpotifyPlayerError(errorMessage) {
+      console.log('[SPOTIFY PLAYER] Error:', errorMessage);
+      // エラーの場合は待機中のボタンをリセット
+      if (pendingPlayButton) {
+        pendingPlayButton = null;
+      }
+    }
+    
+    // フローティングプレイヤーの結果表示を更新
+    function updateFloatingPlayerResults(data) {
+      const currentVideosList = document.getElementById('videos-list');
+      if (!currentVideosList) return;
+      
+      if (data.error) {
+        if (data.error.includes('制限') || data.error.includes('quota')) {
+          currentVideosList.innerHTML = '<div class="text-center py-8 text-red-400 text-sm">YouTube APIの利用制限に達しました。しばらく時間をおいてから再度お試しください。</div>';
+        } else {
+          currentVideosList.innerHTML = `<div class="text-center py-8 text-red-400 text-sm">エラー: ${data.error}</div>`;
+        }
+      } else if (data.videos && data.videos.length > 0) {
+        displayVideosList(data.videos);
+      } else {
+        currentVideosList.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">関連する動画が見つかりませんでした</div>';
+      }
     }
     
     // 動画リスト表示
@@ -796,10 +1424,14 @@
           } else {
             currentVideosList.innerHTML = `<div class="text-center py-8 text-red-400 text-sm">エラー: ${data.error}</div>`;
           }
+          // エラーの場合は待機中のボタンをリセット
+          pendingPlayButton = null;
         } else if (data.videos && data.videos.length > 0) {
           displayVideosList(data.videos);
         } else {
           currentVideosList.innerHTML = '<div class="text-center py-8 text-gray-400 text-sm">関連する動画が見つかりませんでした</div>';
+          // 検索結果がない場合は待機中のボタンをリセット
+          pendingPlayButton = null;
         }
         isSearching = false;
       })
@@ -809,6 +1441,8 @@
         if (currentVideosList) {
           currentVideosList.innerHTML = `<div class="text-center py-8 text-red-400 text-sm">動画の検索に失敗しました: ${error.message}</div>`;
         }
+        // エラーの場合も待機中のボタンをリセット
+        pendingPlayButton = null;
         isSearching = false;
       });
     }
@@ -877,23 +1511,56 @@
       if (videoItem) {
         const videoId = videoItem.dataset.videoId;
         const videoTitle = videoItem.dataset.videoTitle;
-        playVideoInPlayer(videoId, videoTitle);
+        
+        // プレイリスト内の動画インデックスを更新
+        const videoIndex = currentPlaylist.findIndex(video => video.video_id === videoId);
+        if (videoIndex !== -1) {
+          currentIndex = videoIndex;
+        }
+        
+        // 選択された動画でプレイヤーバーを更新
+        const selectedVideo = currentPlaylist.find(video => video.video_id === videoId);
+        if (selectedVideo) {
+          // プレイヤーバーの楽曲情報を更新
+          updateTrackInfo(selectedVideo);
+          
+          // 対応するwork_itemのインデックスを見つけて更新
+          // 元の楽曲タイトル・アーティストが一致するwork_itemを探す
+          if (selectedVideo.original_title && selectedVideo.original_artist) {
+            const matchingWorkIndex = workItemsList.findIndex(work => 
+              work.title === selectedVideo.original_title && work.artist === selectedVideo.original_artist
+            );
+            if (matchingWorkIndex !== -1) {
+              currentWorkIndex = matchingWorkIndex;
+              console.log('Updated currentWorkIndex to match selected video:', currentWorkIndex);
+            }
+          }
+          
+          // YouTube Player APIで再生
+          if (isPlayerReady && youtubePlayer) {
+            youtubePlayer.loadVideoById(videoId);
+            showSpotifyPlayerBar();
+          }
+        }
+        
+        playVideoInPlayer(videoId, videoTitle, null); // 動画リストからのクリックの場合はボタンなし
       }
     }
     
 
     // プレイヤーで動画を再生（グローバルスコープでも利用可能にする）
-    window.playVideoInPlayer = function playVideoInPlayer(videoId, videoTitle) {
-      const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-      
-      // iframeのsrcを設定
-      youtubeIframe.src = embedUrl;
-      
+    window.playVideoInPlayer = function playVideoInPlayer(videoId, videoTitle, clickedButton = null) {
       // タイトルを更新
       playerTitle.textContent = videoTitle;
       
-      // プレイヤービューに切り替え
-      window.showPlayer();
+      // クリックされたボタンまたは待機中のボタンを再生中状態に変更
+      const buttonToUpdate = clickedButton || pendingPlayButton;
+      if (buttonToUpdate) {
+        setButtonToPlaying(buttonToUpdate);
+        pendingPlayButton = null;  // 使用後はリセット
+      }
+      
+      // フローティングウインドウは3曲表示のままにする（showPlayer()を呼ばない）
     }
     
     // 最小化/復元機能
@@ -912,6 +1579,8 @@
       }
     }
     
+    // グローバルに移動済みの関数を使用
+
     // 最小化ボタンのクリックイベント
     minimizeButton.addEventListener('click', function() {
       isMinimized = !isMinimized;
@@ -921,6 +1590,12 @@
     // 閉じるボタンのクリックイベント
     closeButton.addEventListener('click', function() {
       player.classList.add('hidden');
+      // すべての再生ボタンを待機状態に戻す
+      if (currentPlayingButton) {
+        resetButtonToIdle(currentPlayingButton);
+        currentPlayingButton = null;
+      }
+      pendingPlayButton = null;
       // プレイヤーをリセット
       youtubeIframe.src = '';
       isMinimized = false;
@@ -940,17 +1615,54 @@
   document.addEventListener('turbo:before-visit', function() {
     console.log('[TURBO DEBUG] turbo:before-visit fired');
     isYouTubePlayerInitialized = false;
+    isPlayerReady = false;
     // previewClickListenerAddedはリセットしない（グローバルなイベントリスナーのため）
+    
+    // 再生ボタンの状態をリセット
+    if (typeof currentPlayingButton !== 'undefined' && currentPlayingButton) {
+      resetButtonToIdle(currentPlayingButton);
+      currentPlayingButton = null;
+    }
+    if (typeof pendingPlayButton !== 'undefined') {
+      pendingPlayButton = null;
+    }
+    
+    // プレイヤーの状態をリセット
+    if (youtubePlayer && youtubePlayer.destroy) {
+      try {
+        youtubePlayer.destroy();
+        youtubePlayer = null;
+      } catch (e) {
+        console.log('Error destroying player on navigation:', e);
+      }
+    }
   });
 
   // YouTube フローティングプレイヤーを初期化
   document.addEventListener('DOMContentLoaded', function() {
     console.log('[TURBO DEBUG] DOMContentLoaded fired');
     initYouTubeFloatingPlayer();
+    checkAndInitializePlayer();
+    // work_itemリストを収集（YouTube Player APIが読み込まれていない場合用）
+    setTimeout(() => {
+      if (!isPlayerReady) {
+        collectWorkItems();
+      }
+    }, 500);
   });
+  
   document.addEventListener('turbo:load', function() {
     console.log('[TURBO DEBUG] turbo:load fired');
     initYouTubeFloatingPlayer();
+    checkAndInitializePlayer();
+    // work_itemリストを収集
+    setTimeout(() => {
+      collectWorkItems();
+      // プレイヤーコントロールを再設定
+      if (isPlayerReady) {
+        setupPlayerControls();
+      }
+    }, 500);
   });
 
 </script>
