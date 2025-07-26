@@ -1,7 +1,7 @@
 <div class="navbar bg-gray-900 fixed top-0 left-0 right-0 z-50 shadow-xl backdrop-blur-md bg-opacity-95 h-16 border-b border-gray-800">
   <div class="flex-1">
     <div class="flex items-center">
-      <%= link_to "Who Wrote The Song", root_path, class: "text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 text-transparent bg-clip-text hover:from-green-500 hover:to-blue-600 transition-all duration-300 mr-12" %>
+      <%= link_to "Who Wrote The Song ?", root_path, class: "text-xl font-bold bg-gradient-to-r from-green-400 to-blue-500 text-transparent bg-clip-text hover:from-green-500 hover:to-blue-600 transition-all duration-300 mr-12" %>
       
       <div class="hidden lg:flex items-center gap-6">
         <%= link_to "探す", root_path, class: "text-gray-300 hover:text-white font-medium transition-colors duration-200" %>
@@ -27,15 +27,15 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </div>
-        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-gray-800 text-gray-300 rounded-box w-52 right-0 border border-gray-700">
-          <li class="menu-title">
-            <span class="text-gray-400"><%= current_user.display_name %></span>
+        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-xl bg-gray-900 text-gray-200 rounded-lg w-56 right-0 border border-gray-700 backdrop-blur-sm bg-opacity-95">
+          <li class="mb-2 px-3 py-2 border-b border-gray-700">
+            <span class="text-green-400 font-medium text-sm"><%= current_user.display_name %></span>
           </li>
-          <li><%= link_to "探す", root_path %></li>
-          <li><%= link_to "お気に入り(準備中)", "#" %></li>
-          <li><%= link_to "プレイリスト(準備中)", "#" %></li>
-          <li>
-            <%= link_to "ログアウト", destroy_user_session_path, data: { "turbo-method": :delete }, class: "hover:bg-gray-700 text-red-400" %>
+          <li><%= link_to "探す", root_path, class: "px-3 py-2 hover:bg-gray-800 rounded-md transition-colors duration-200 text-gray-200 hover:text-white" %></li>
+          <li><%= link_to "お気に入り(準備中)", "#", class: "px-3 py-2 hover:bg-gray-800 rounded-md transition-colors duration-200 text-gray-400" %></li>
+          <li><%= link_to "プレイリスト(準備中)", "#", class: "px-3 py-2 hover:bg-gray-800 rounded-md transition-colors duration-200 text-gray-400" %></li>
+          <li class="mt-2 pt-2 border-t border-gray-700">
+            <%= link_to "ログアウト", destroy_user_session_path, data: { "turbo-method": :delete }, class: "px-3 py-2 hover:bg-red-600 rounded-md transition-colors duration-200 text-red-400 hover:text-white" %>
           </li>
         </ul>
       </div>
@@ -47,10 +47,10 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </div>
-        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow-lg bg-gray-800 text-gray-300 rounded-box w-52 right-0 border border-gray-700">
-          <li><%= link_to "探す", root_path %></li>
-          <li><%= link_to "ログイン", new_user_session_path %></li>
-          <li><%= link_to "アカウント登録", new_user_registration_path %></li>
+        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-xl bg-gray-900 text-gray-200 rounded-lg w-56 right-0 border border-gray-700 backdrop-blur-sm bg-opacity-95">
+          <li><%= link_to "探す", root_path, class: "px-3 py-2 hover:bg-gray-800 rounded-md transition-colors duration-200 text-gray-200 hover:text-white" %></li>
+          <li><%= link_to "ログイン", new_user_session_path, class: "px-3 py-2 hover:bg-gray-800 rounded-md transition-colors duration-200 text-gray-200 hover:text-white" %></li>
+          <li><%= link_to "アカウント登録", new_user_registration_path, class: "px-3 py-2 hover:bg-green-600 rounded-md transition-colors duration-200 text-green-400 hover:text-white font-medium" %></li>
         </ul>
       </div>
       
