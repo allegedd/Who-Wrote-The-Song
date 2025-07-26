@@ -20,6 +20,7 @@
 
   <body class="bg-gray-950 text-gray-100 min-h-screen">
     <%= render 'shared/header' %>
+    <%= render 'shared/flash_messages' %>
     <% if content_for?(:layout_class) && content_for(:layout_class) == "full-screen" %>
       <%= yield %>
     <% else %>
