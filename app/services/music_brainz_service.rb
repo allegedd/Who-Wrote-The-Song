@@ -16,7 +16,7 @@ class MusicBrainzService
       work_results = search_works_only(title, artist)
 
       elapsed = (Time.current - start_time) * 1000
-      if elapsed > 1500
+      if elapsed > 1000
         return work_results.take(10)
       end
 
@@ -219,6 +219,7 @@ class MusicBrainzService
   # タイトルがある場合はタイトル優先で検索
   def build_work_query(title, artist = nil)
     query = if title.present? && artist.present?
+      # アーティスト指定時はタイトルのみで検索し、後でフィルタリング
       title
     elsif title.present?
       title
@@ -237,15 +238,62 @@ class MusicBrainzService
   end
 
   # アーティスト名でWorkをフィルタリング
-  # 演奏者、作曲者、作詞者でマッチング
+  # 演奏者、作曲者、作詞者、recording関係でマッチング
   def filter_works_by_artist(works, target_artist)
     works.select do |song|
       artist_match = song.artist&.include?(target_artist)
       composer_match = song.composers.any? { |c| c[:name]&.include?(target_artist) }
       lyricist_match = song.lyricists.any? { |l| l[:name]&.include?(target_artist) }
 
-      artist_match || composer_match || lyricist_match
+      # recordingの演奏者情報もチェック
+      recording_artist_match = check_recording_artists(song.id, target_artist)
+
+      artist_match || composer_match || lyricist_match || recording_artist_match
     end
+  end
+
+  # Workに関連するrecordingの演奏者をチェック
+  def check_recording_artists(work_id, target_artist)
+    cache_key = "work_recordings:#{work_id}"
+    cached_result = Rails.cache.read(cache_key)
+    return cached_result unless cached_result.nil?
+
+    # Work詳細を取得してrecording関係をチェック
+    url = "#{BASE_URL}/work/#{work_id}"
+    response = @client.get(url, {
+      query: {
+        fmt: "json",
+        inc: "recording-rels"
+      },
+      timeout: 2
+    })
+
+    result = false
+    if response.success?
+      work_data = response.parsed_response
+      relations = work_data.dig("relations") || []
+
+      # performance関係のrecordingをチェック
+      performance_relations = relations.select { |rel| rel["type"] == "performance" }
+
+      performance_relations.each do |relation|
+        recording_id = relation.dig("recording", "id")
+        if recording_id
+          recording_artist = fetch_artist_from_recording(recording_id)
+          if recording_artist&.include?(target_artist)
+            result = true
+            break
+          end
+        end
+      end
+    end
+
+    # 結果をキャッシュ（短時間）
+    Rails.cache.write(cache_key, result, expires_in: 10.minutes)
+    result
+  rescue StandardError => e
+    Rails.logger.error "Error checking recording artists: #{e.message}"
+    false
   end
 
   def extract_artist_from_work_search(work)
