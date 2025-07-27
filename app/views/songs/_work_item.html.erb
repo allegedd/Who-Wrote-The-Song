@@ -13,11 +13,12 @@
     <% end %>
   </div>
   <p class="text-sm text-gray-400 mb-2" data-artist-info="<%= work.id %>">
-    アーティスト: <span class="text-gray-300 artist-name">
-      <%= work.artist.present? ? work.artist : "読み込み中..." %>
-    </span>
+    アーティスト: 
     <% if work.loading_artist || work.artist.blank? %>
-      <span class="artist-loading text-gray-500 text-xs ml-1">🔄</span>
+      <span class="artist-loading loading-spinner"></span>
+      <span class="artist-name hidden"><%= work.artist %></span>
+    <% else %>
+      <span class="text-gray-300 artist-name"><%= work.artist %></span>
     <% end %>
   </p>
   <% if work.creator_names.present? %>

@@ -28,11 +28,12 @@
                       <%= song.title %>
                     </h2>
                     <p class="text-gray-400 mb-2" data-artist-info="<%= song.id %>">
-                      アーティスト: <span class="text-gray-300 artist-name">
-                        <%= song.artist.present? ? song.artist : "読み込み中..." %>
-                      </span>
+                      アーティスト:
                       <% if song.loading_artist || song.artist.blank? %>
-                        <span class="artist-loading text-gray-500 text-sm ml-2">🔄</span>
+                        <span class="artist-loading loading-spinner"></span>
+                        <span class="artist-name hidden"><%= song.artist %></span>
+                      <% else %>
+                        <span class="text-gray-300 artist-name"><%= song.artist %></span>
                       <% end %>
                     </p>
                     <% if song.creator_names.present? %>
@@ -110,25 +111,7 @@
     animation: fadeInUp 0.4s ease-out forwards;
   }
   
-  /* アーティスト情報の読み込み中アニメーション */
-  .artist-loading {
-    animation: spin 1s linear infinite;
-  }
   
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  
-  /* アーティスト情報更新時のアニメーション */
-  .artist-name-updated {
-    animation: highlightUpdate 1s ease-out;
-  }
-  
-  @keyframes highlightUpdate {
-    0% { background-color: rgba(34, 197, 94, 0.2); }
-    100% { background-color: transparent; }
-  }
 </style>
 
 <script>
