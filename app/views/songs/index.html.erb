@@ -158,6 +158,8 @@
             
             if (nameSpan) {
               nameSpan.textContent = artist.artist;
+              nameSpan.classList.remove('hidden');
+
               // アニメーションを追加
               nameSpan.classList.add('artist-name-updated');
               setTimeout(() => {
@@ -185,15 +187,5 @@
   }
   
   // Turbo対応のイベントリスナー
-  document.addEventListener('DOMContentLoaded', loadArtistsOnSearchPage);
   document.addEventListener('turbo:load', loadArtistsOnSearchPage);
-  document.addEventListener('turbo:render', loadArtistsOnSearchPage);
-  
-  // 既にDOMが読み込まれている場合は即座に実行
-  if (document.readyState === 'loading') {
-    console.log('Document is loading');
-  } else {
-    console.log('Document already loaded, executing immediately');
-    loadArtistsOnSearchPage();
-  }
 </script>
