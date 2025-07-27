@@ -1103,23 +1103,18 @@
   });
   
   // 複数のイベントに対応（Turbo対応）
-  document.addEventListener('DOMContentLoaded', loadArtistsOnPageLoad);
   document.addEventListener('turbo:load', loadArtistsOnPageLoad);
-  document.addEventListener('turbo:render', loadArtistsOnPageLoad);
-  
-  // 即座に実行も試す（既にDOMが読み込まれている場合）
-  if (document.readyState === 'loading') {
-    console.log('Document is loading');
-  } else {
-    console.log('Document already loaded, executing immediately');
-    loadArtistsOnPageLoad();
-  }
 
   // YouTube フローティングプレイヤー機能（詳細ページ版）
   let isYouTubePlayerInitialized = false;
   let previewClickListenerAdded = false;
   
   function initYouTubeFloatingPlayer() {
+    const playerElement = document.getElementById('youtube-floating-player');
+    if (!playerElement) {
+      return; // プレイヤー要素がなければ何もしない
+    }
+
     console.log('[TURBO DEBUG] initYouTubeFloatingPlayer called, isYouTubePlayerInitialized:', isYouTubePlayerInitialized);
     
     if (isYouTubePlayerInitialized) {
@@ -1638,19 +1633,6 @@
     }
   });
 
-  // YouTube フローティングプレイヤーを初期化
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('[TURBO DEBUG] DOMContentLoaded fired');
-    initYouTubeFloatingPlayer();
-    checkAndInitializePlayer();
-    // work_itemリストを収集（YouTube Player APIが読み込まれていない場合用）
-    setTimeout(() => {
-      if (!isPlayerReady) {
-        collectWorkItems();
-      }
-    }, 500);
-  });
-  
   document.addEventListener('turbo:load', function() {
     console.log('[TURBO DEBUG] turbo:load fired');
     initYouTubeFloatingPlayer();
