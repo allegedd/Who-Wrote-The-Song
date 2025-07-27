@@ -244,20 +244,20 @@ class MusicBrainzService
       artist_match = song.artist&.include?(target_artist)
       composer_match = song.composers.any? { |c| c[:name]&.include?(target_artist) }
       lyricist_match = song.lyricists.any? { |l| l[:name]&.include?(target_artist) }
-      
+
       # recordingの演奏者情報もチェック
       recording_artist_match = check_recording_artists(song.id, target_artist)
 
       artist_match || composer_match || lyricist_match || recording_artist_match
     end
   end
-  
+
   # Workに関連するrecordingの演奏者をチェック
   def check_recording_artists(work_id, target_artist)
     cache_key = "work_recordings:#{work_id}"
     cached_result = Rails.cache.read(cache_key)
     return cached_result unless cached_result.nil?
-    
+
     # Work詳細を取得してrecording関係をチェック
     url = "#{BASE_URL}/work/#{work_id}"
     response = @client.get(url, {
@@ -267,15 +267,15 @@ class MusicBrainzService
       },
       timeout: 2
     })
-    
+
     result = false
     if response.success?
       work_data = response.parsed_response
       relations = work_data.dig("relations") || []
-      
+
       # performance関係のrecordingをチェック
       performance_relations = relations.select { |rel| rel["type"] == "performance" }
-      
+
       performance_relations.each do |relation|
         recording_id = relation.dig("recording", "id")
         if recording_id
@@ -287,7 +287,7 @@ class MusicBrainzService
         end
       end
     end
-    
+
     # 結果をキャッシュ（短時間）
     Rails.cache.write(cache_key, result, expires_in: 10.minutes)
     result
