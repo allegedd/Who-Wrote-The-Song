@@ -26,7 +26,7 @@
               class: "w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg focus:outline-none focus:border-green-500 transition-colors text-gray-100 placeholder-gray-500",
               placeholder: t('helpers.placeholder.user.password') %>
           <% if @minimum_password_length %>
-            <p class="mt-1 text-xs text-gray-400"><%= t('errors.messages.too_short', count: @minimum_password_length) %></p>
+            <p class="mt-1 text-xs text-gray-400"><%= t('devise.password_hint', count: @minimum_password_length) %></p>
           <% end %>
         </div>
 
