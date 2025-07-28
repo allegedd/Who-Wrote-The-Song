@@ -1,4 +1,6 @@
 ja:
+  errors:
+    format: "%{attribute}%{message}"
   activerecord:
     attributes:
       user:
@@ -9,16 +11,23 @@ ja:
         remember_me: "ログイン状態を保持する"
         current_password: "現在のパスワード"
     errors:
+      format: "%{attribute}%{message}"
+      models:
+        user:
+          attributes:
+            email:
+              taken: "登録できませんでした。入力内容をご確認ください。"
+            username:
+              taken: "はすでに使用されています。"
+            password_confirmation:
+              confirmation: "パスワードとパスワード確認が一致しません。"
       messages:
-        blank: "を入力してください"
-        too_short: "は%{count}文字以上で入力してください"
-        too_long: "は%{count}文字以内で入力してください"
-        taken: "はすでに使用されています"
-        invalid: "は無効です"
-        confirmation: "と確認が一致しません"
-  errors:
-    messages:
-      too_short: "%{count}文字以上"
+        blank: "を入力してください。"
+        too_short: "は%{count}文字以上で入力してください。"
+        too_long: "は%{count}文字以内で入力してください。"
+        taken: "はすでに使用されています。"
+        invalid: "は無効です。"
+        confirmation: "と確認が一致しません。"
   helpers:
     label:
       user:
@@ -40,6 +49,7 @@ ja:
       session:
         create: "ログイン"
   devise:
+    password_hint: "%{count}文字以上"
     registrations:
       new:
         sign_up_prompt: "アカウントをお持ちでない場合は"

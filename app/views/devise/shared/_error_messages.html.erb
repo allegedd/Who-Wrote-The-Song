@@ -1,15 +1,22 @@
 <% if resource.errors.any? %>
-  <div id="error_explanation" data-turbo-cache="false" class="mb-4 bg-gray-900 border border-red-500 rounded-lg p-4 bg-opacity-80 backdrop-blur-sm">
+  <div id="error_explanation" data-turbo-cache="false" class="mb-4 bg-red-950 border border-red-600 rounded-lg p-4">
     <div class="flex items-start">
       <div class="flex-shrink-0">
         <span class="text-red-400 text-lg font-bold">⚠</span>
       </div>
       <div class="ml-3 flex-1">
-        <ul class="space-y-1 text-sm text-gray-300">
-          <% resource.errors.full_messages.each do |message| %>
+        <ul class="space-y-1 text-xs text-red-200">
+          <% resource.errors.each do |error| %>
             <li class="flex items-center">
               <span class="w-1 h-1 bg-red-400 rounded-full mr-2 flex-shrink-0"></span>
-              <%= message %>
+              <span class="break-words">
+                <% if (error.attribute == :email && error.type == :taken) || 
+                     (error.attribute == :password_confirmation && error.type == :confirmation) %>
+                  <%= error.message %>
+                <% else %>
+                  <%= resource.errors.full_message(error.attribute, error.message) %>
+                <% end %>
+              </span>
             </li>
           <% end %>
         </ul>
