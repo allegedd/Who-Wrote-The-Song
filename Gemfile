@@ -66,7 +66,7 @@ gem "rsolr"
 gem "nokogiri"
 
 # css-framework
-gem "tailwindcss-rails", "~> 4.3"
+gem "tailwindcss-rails", "~> 4.4"
 
 # HTTP Client
 gem "httparty"
